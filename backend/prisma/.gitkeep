@@ -1,0 +1,2 @@
+# This file ensures the prisma directory is tracked by git
+# Migrations will be generated when running: npx prisma migrate dev

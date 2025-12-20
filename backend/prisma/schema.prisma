@@ -1,0 +1,168 @@
+// This is your Prisma schema file
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model Plugin {
+  id             String          @id @default(uuid())
+  addonKey       String          @unique
+  appId          String?
+  name           String
+  vendor         String?
+  summary        String?
+  marketplaceUrl String?
+  batchNumber    Int             @default(0)
+  createdAt      DateTime        @default(now())
+  updatedAt      DateTime        @updatedAt
+
+  versions       PluginVersion[]
+  files          PluginFile[]
+
+  @@index([addonKey])
+  @@index([name])
+  @@index([batchNumber])
+}
+
+model PluginVersion {
+  id                      String    @id @default(uuid())
+  pluginId                String
+  version                 String
+  releaseDate             DateTime?
+  jiraMin                 String?
+  jiraMax                 String?
+  dataCenterCompatible    Boolean   @default(true)
+  releaseNotes            String?   @db.Text
+  changelogUrl            String?
+  changelog               String?   @db.Text
+  hidden                  Boolean   @default(false)
+  deprecated              Boolean   @default(false)
+  downloadUrl             String?
+  createdAt               DateTime  @default(now())
+  updatedAt               DateTime  @updatedAt
+
+  plugin                  Plugin    @relation(fields: [pluginId], references: [id], onDelete: Cascade)
+  files                   PluginFile[]
+
+  @@unique([pluginId, version])
+  @@index([pluginId])
+  @@index([version])
+  @@index([dataCenterCompatible])
+}
+
+model PluginFile {
+  id                String              @id @default(uuid())
+  pluginId          String
+  versionId         String?
+  version           String
+  filePath          String?
+  checksum          String?
+  size              BigInt?
+  downloadStatus    PluginDownloadStatus @default(PENDING)
+  downloadUrl       String?
+  errorMessage      String?             @db.Text
+  downloadAttempts  Int                 @default(0)
+  lastAttemptAt     DateTime?
+  downloadedAt      DateTime?
+  createdAt         DateTime            @default(now())
+  updatedAt         DateTime            @updatedAt
+
+  plugin            Plugin              @relation(fields: [pluginId], references: [id], onDelete: Cascade)
+  pluginVersion     PluginVersion?      @relation(fields: [versionId], references: [id], onDelete: Cascade)
+
+  @@unique([pluginId, version])
+  @@index([pluginId])
+  @@index([versionId])
+  @@index([downloadStatus])
+}
+
+enum PluginDownloadStatus {
+  PENDING
+  DOWNLOADING
+  COMPLETED
+  FAILED
+  SKIPPED
+}
+
+model SyncJob {
+  id                String        @id @default(uuid())
+  stage             SyncStage
+  status            JobStatus     @default(IDLE)
+  totalItems        Int           @default(0)
+  processedItems    Int           @default(0)
+  failedItems       Int           @default(0)
+  currentOffset     Int           @default(0)
+  currentBatch      Int           @default(0)
+  lastError         String?       @db.Text
+  failedPluginKeys  String[]      @default([])
+  consecutiveErrors Int           @default(0)
+  startedAt         DateTime?
+  completedAt       DateTime?
+  pausedAt          DateTime?
+  createdAt         DateTime      @default(now())
+  updatedAt         DateTime      @updatedAt
+
+  progress          SyncJobProgress[]
+  logs              SyncJobLog[]
+
+  @@index([stage])
+  @@index([status])
+  @@index([currentBatch])
+}
+
+enum SyncStage {
+  METADATA_INGESTION
+  DOWNLOAD_LATEST
+  DOWNLOAD_ALL
+}
+
+enum JobStatus {
+  IDLE
+  RUNNING
+  PAUSED
+  FAILED
+  COMPLETED
+}
+
+model SyncJobProgress {
+  id              String    @id @default(uuid())
+  jobId           String
+  phase           String
+  currentItem     String?
+  message         String?
+  itemsProcessed  Int       @default(0)
+  itemsTotal      Int       @default(0)
+  createdAt       DateTime  @default(now())
+
+  job             SyncJob   @relation(fields: [jobId], references: [id], onDelete: Cascade)
+
+  @@index([jobId])
+  @@index([createdAt])
+}
+
+model SyncJobLog {
+  id        String      @id @default(uuid())
+  jobId     String
+  level     LogLevel    @default(INFO)
+  message   String      @db.Text
+  metadata  String?     @db.Text
+  createdAt DateTime    @default(now())
+
+  job       SyncJob     @relation(fields: [jobId], references: [id], onDelete: Cascade)
+
+  @@index([jobId])
+  @@index([createdAt])
+  @@index([level])
+}
+
+enum LogLevel {
+  DEBUG
+  INFO
+  WARN
+  ERROR
+}

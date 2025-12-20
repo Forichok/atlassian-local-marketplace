@@ -1,0 +1,70 @@
+services:
+  postgres:
+    image: postgres:15-alpine
+    container_name: pluginx-postgres
+    environment:
+      POSTGRES_DB: pluginx
+      POSTGRES_USER: pluginx
+      POSTGRES_PASSWORD: pluginx
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U pluginx"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - pluginx-network
+
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: pluginx-backend
+    environment:
+      DATABASE_URL: postgresql://pluginx:pluginx@postgres:5432/pluginx
+      BACKEND_PORT: 3001
+      NODE_ENV: production
+      JAR_STORAGE_PATH: /data/jars
+      MARKETPLACE_BASE_URL: https://marketplace.atlassian.com
+      MARKETPLACE_RATE_LIMIT_DELAY: 10
+      MARKETPLACE_MAX_RETRIES: 5
+      MARKETPLACE_RETRY_DELAY: 100
+      JOB_CHUNK_SIZE: 5
+      JOB_CONCURRENT_DOWNLOADS: 5
+      JOB_AUTO_CONTINUE: false
+    ports:
+      - "3001:3001"
+    volumes:
+      - jar-storage:/data/jars
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - pluginx-network
+    restart: unless-stopped
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+      args:
+        VITE_API_URL: http://localhost:3001
+    container_name: pluginx-frontend
+    ports:
+      - "3000:80"
+    depends_on:
+      - backend
+    networks:
+      - pluginx-network
+    restart: unless-stopped
+
+volumes:
+  postgres-data:
+  jar-storage:
+
+networks:
+  pluginx-network:
+    driver: bridge
