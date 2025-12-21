@@ -1,7 +1,6 @@
 import { SyncStage, LogLevel } from '@prisma/client';
 import { JobManager } from '../services/job-manager';
 import { MarketplaceClient } from '../services/marketplace-client';
-import { HtmlParser } from '../services/html-parser';
 import { prisma } from '../lib/prisma';
 import { config } from '../config';
 import { Stage2DownloadLatest } from './stage2-download-latest';
@@ -10,7 +9,6 @@ import { Stage3DownloadAll } from './stage3-download-all';
 export class BatchSyncCoordinator {
   private jobManager: JobManager;
   private marketplaceClient: MarketplaceClient;
-  private htmlParser: HtmlParser;
   private stage2: Stage2DownloadLatest;
   private stage3: Stage3DownloadAll;
   private currentBatch: number = 0;
@@ -18,7 +16,6 @@ export class BatchSyncCoordinator {
   constructor() {
     this.jobManager = new JobManager();
     this.marketplaceClient = new MarketplaceClient();
-    this.htmlParser = new HtmlParser();
     this.stage2 = new Stage2DownloadLatest();
     this.stage3 = new Stage3DownloadAll();
   }
@@ -222,16 +219,15 @@ export class BatchSyncCoordinator {
   }
 
   private async processAddon(jobId: string, addon: any): Promise<any> {
-
-    const selfLink = typeof addon._links?.self === 'string'
-      ? addon._links.self
-      : addon._links?.self?.href;
-
     const alternateLink = typeof addon._links?.alternate === 'string'
       ? addon._links.alternate
       : addon._links?.alternate?.href;
 
     const appId = alternateLink?.match(/\/apps\/(\d+)\//)?.[1];
+
+    const marketplaceUrl = alternateLink
+      ? `https://marketplace.atlassian.com${alternateLink}?hosting=datacenter`
+      : undefined;
 
     const plugin = await prisma.plugin.upsert({
       where: { addonKey: addon.key },
@@ -241,14 +237,14 @@ export class BatchSyncCoordinator {
         name: addon.name,
         vendor: addon.vendor?.name,
         summary: addon.summary,
-        marketplaceUrl: selfLink,
+        marketplaceUrl: marketplaceUrl,
         batchNumber: this.currentBatch,
       },
       update: {
         name: addon.name,
         vendor: addon.vendor?.name,
         summary: addon.summary,
-        marketplaceUrl: selfLink,
+        marketplaceUrl: marketplaceUrl,
         batchNumber: this.currentBatch,
       },
     });
@@ -285,53 +281,6 @@ export class BatchSyncCoordinator {
       );
     }
 
-    // Parse HTML for additional version info
-    if (selfLink) {
-      const slug = addon.key.replace(/\./g, '-');
-
-      try {
-        const versionHistory = await this.htmlParser.parseVersionHistory(appId, slug);
-
-        for (const versionEntry of versionHistory) {
-          await prisma.pluginVersion.upsert({
-            where: {
-              pluginId_version: {
-                pluginId: plugin.id,
-                version: versionEntry.version,
-              },
-            },
-            create: {
-              pluginId: plugin.id,
-              version: versionEntry.version,
-              releaseDate: versionEntry.releaseDate,
-              jiraMin: versionEntry.jiraMin,
-              jiraMax: versionEntry.jiraMax,
-              dataCenterCompatible: versionEntry.dataCenterCompatible,
-              releaseNotes: versionEntry.releaseNotes,
-              hidden: versionEntry.hidden,
-              deprecated: versionEntry.deprecated,
-              downloadUrl: versionEntry.downloadUrl,
-            },
-            update: {
-              releaseDate: versionEntry.releaseDate,
-              jiraMin: versionEntry.jiraMin,
-              jiraMax: versionEntry.jiraMax,
-              dataCenterCompatible: versionEntry.dataCenterCompatible,
-              releaseNotes: versionEntry.releaseNotes,
-              hidden: versionEntry.hidden,
-              deprecated: versionEntry.deprecated,
-              downloadUrl: versionEntry.downloadUrl,
-            },
-          });
-        }
-      } catch (error) {
-        await this.jobManager.log(
-          jobId,
-          LogLevel.WARN,
-          `Failed to parse version history for ${addon.key}: ${error instanceof Error ? error.message : String(error)}`
-        );
-      }
-    }
 
     return plugin;
   }

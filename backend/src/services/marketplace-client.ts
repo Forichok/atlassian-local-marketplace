@@ -167,39 +167,88 @@ export class MarketplaceClient {
     });
   }
 
-  async fetchAddonVersions(addonKey: string): Promise<MarketplaceVersion[]> {
-    logger.debug('Fetching addon versions', { addonKey });
+  async fetchAddonVersions(addonKey: string, maxVersions: number = 25): Promise<MarketplaceVersion[]> {
+    logger.debug('Fetching addon versions', { addonKey, maxVersions });
 
     // No delay for version fetching to speed up Stage 1
 
-    return retry(
-      async () => {
-        const response = await this.client.get<{ _embedded?: { versions?: MarketplaceVersion[] } }>(
-          `/rest/2/addons/${addonKey}/versions`
-        );
-        const versions = response.data._embedded?.versions || [];
+    const allVersions: MarketplaceVersion[] = [];
+    let offset = 0;
+    const limit = Math.min(50, maxVersions); // Maximum allowed by API, but respect maxVersions
+    let hasMore = true;
 
-        logger.debug('Successfully fetched addon versions', {
-          addonKey,
-          versionCount: versions.length,
-        });
+    while (hasMore && allVersions.length < maxVersions) {
+      const versions = await retry(
+        async () => {
+          const response = await this.client.get<{
+            _embedded?: { versions?: MarketplaceVersion[] },
+            count?: number,
+            _links?: { next?: { href: string } }
+          }>(
+            `/rest/2/addons/${addonKey}/versions`,
+            {
+              params: { limit, offset, hosting: 'datacenter' }
+            }
+          );
 
-        return versions;
-      },
-      {
-        maxRetries: config.marketplace.maxRetries,
-        retryDelay: config.marketplace.retryDelay,
-        onRetry: (error, attempt) => {
-          logger.warn('Retrying fetchAddonVersions', {
-            attempt,
-            maxRetries: config.marketplace.maxRetries,
+          const versions = response.data._embedded?.versions || [];
+          const totalCount = response.data.count || 0;
+
+          logger.debug('Fetched addon versions page', {
             addonKey,
-            message: error.message,
-            code: (error as any).code,
+            offset,
+            limit,
+            returned: versions.length,
+            total: totalCount,
           });
+
+          return {
+            versions,
+            hasNext: response.data._links?.next !== undefined,
+            totalCount,
+          };
         },
+        {
+          maxRetries: config.marketplace.maxRetries,
+          retryDelay: config.marketplace.retryDelay,
+          onRetry: (error, attempt) => {
+            logger.warn('Retrying fetchAddonVersions', {
+              attempt,
+              maxRetries: config.marketplace.maxRetries,
+              addonKey,
+              offset,
+              message: error.message,
+              code: (error as any).code,
+            });
+          },
+        }
+      );
+
+      allVersions.push(...versions.versions);
+
+      hasMore = versions.hasNext && versions.versions.length === limit;
+      offset += versions.versions.length;
+
+      if (!hasMore || allVersions.length >= maxVersions) {
+        logger.info('Successfully fetched addon versions', {
+          addonKey,
+          totalFetched: allVersions.length,
+          expectedTotal: versions.totalCount,
+          limitedTo: maxVersions,
+        });
       }
-    );
+    }
+
+    // Trim to maxVersions if we fetched more than needed
+    const result = allVersions.slice(0, maxVersions);
+
+    logger.info('Completed fetching addon versions', {
+      addonKey,
+      totalVersions: result.length,
+      maxVersions,
+    });
+
+    return result;
   }
 
   async fetchVersionDetails(addonKey: string, buildNumber: number): Promise<MarketplaceVersion | null> {

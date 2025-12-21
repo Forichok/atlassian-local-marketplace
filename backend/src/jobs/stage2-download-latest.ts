@@ -70,7 +70,8 @@ export class Stage2DownloadLatest {
 
   private async runBatch(jobId: string, batchNumber: number): Promise<void> {
     try {
-      const targetJiraVersions = ['8.13', '8.20', '9.12', '10.3', '11.3'];
+      // Target major Jira versions: 8, 9, 10, 11
+      const targetJiraMajorVersions = [8, 9, 10, 11];
 
       const plugins = await prisma.plugin.findMany({
         where: { batchNumber } as any,
@@ -97,14 +98,14 @@ export class Stage2DownloadLatest {
       let processed = 0;
 
       for (const plugin of plugins) {
-        for (const jiraVersion of targetJiraVersions) {
-          const latestVersion = this.findLatestCompatibleVersion(plugin.versions, jiraVersion);
+        for (const jiraMajorVersion of targetJiraMajorVersions) {
+          const latestVersion = this.findLatestCompatibleVersionForMajor(plugin.versions, jiraMajorVersion);
 
           if (!latestVersion) {
             await this.jobManager.log(
               jobId,
               LogLevel.WARN,
-              `No compatible version found for ${plugin.addonKey} (Jira ${jiraVersion})`
+              `No compatible version found for ${plugin.addonKey} (Jira ${jiraMajorVersion}.x)`
             );
             processed++;
             continue;
@@ -114,8 +115,8 @@ export class Stage2DownloadLatest {
           await this.jobManager.log(
             jobId,
             LogLevel.INFO,
-            `Downloading ${processed}: ${plugin.addonKey} v${latestVersion.version} for Jira ${jiraVersion}`,
-            { addonKey: plugin.addonKey, jiraVersion, progress: `${processed}` }
+            `Downloading ${processed}: ${plugin.addonKey} v${latestVersion.version} for Jira ${jiraMajorVersion}.x`,
+            { addonKey: plugin.addonKey, jiraMajorVersion, progress: `${processed}` }
           );
 
           await this.queue.add(() => this.downloadVersion(jobId, plugin, latestVersion));
@@ -141,13 +142,13 @@ export class Stage2DownloadLatest {
 
   private async run(jobId: string): Promise<void> {
     try {
-      // Target Jira versions to download for
-      const targetJiraVersions = ['8.13', '8.20', '9.12', '10.3', '11.3'];
+      // Target major Jira versions: 8, 9, 10, 11
+      const targetJiraMajorVersions = [8, 9, 10, 11];
 
       await this.jobManager.log(
         jobId,
         LogLevel.INFO,
-        `Starting download of latest versions for Jira ${targetJiraVersions.join(', ')}`
+        `Starting download of latest versions for Jira ${targetJiraMajorVersions.join('.x, ')}.x`
       );
 
       const plugins = await prisma.plugin.findMany({
@@ -165,8 +166,8 @@ export class Stage2DownloadLatest {
         },
       });
 
-      // Total items = plugins * jira versions
-      const totalItems = plugins.length * targetJiraVersions.length;
+      // Total items = plugins * jira major versions
+      const totalItems = plugins.length * targetJiraMajorVersions.length;
       await this.jobManager.updateProgress(jobId, { totalItems });
 
       let processed = 0;
@@ -178,9 +179,9 @@ export class Stage2DownloadLatest {
           return;
         }
 
-        // Download latest compatible version for each Jira version
-        for (const jiraVersion of targetJiraVersions) {
-          const latestVersion = this.findLatestCompatibleVersion(plugin.versions, jiraVersion);
+        // Download latest compatible version for each Jira major version
+        for (const jiraMajorVersion of targetJiraMajorVersions) {
+          const latestVersion = this.findLatestCompatibleVersionForMajor(plugin.versions, jiraMajorVersion);
 
           processed++;
 
@@ -188,7 +189,7 @@ export class Stage2DownloadLatest {
             await this.jobManager.log(
               jobId,
               LogLevel.WARN,
-              `No compatible version found for ${plugin.addonKey} (Jira ${jiraVersion})`
+              `No compatible version found for ${plugin.addonKey} (Jira ${jiraMajorVersion}.x)`
             );
             await this.jobManager.incrementFailed(jobId);
             await this.jobManager.updateProgress(jobId, { processedItems: processed });
@@ -197,9 +198,9 @@ export class Stage2DownloadLatest {
 
           await this.jobManager.addProgress(
             jobId,
-            'Downloading latest versions per Jira version',
-            `Downloading ${processed}/${totalItems}: ${plugin.addonKey} v${latestVersion.version} (Jira ${jiraVersion})`,
-            `${plugin.addonKey}@${jiraVersion}`,
+            'Downloading latest versions per Jira major version',
+            `Downloading ${processed}/${totalItems}: ${plugin.addonKey} v${latestVersion.version} (Jira ${jiraMajorVersion}.x)`,
+            `${plugin.addonKey}@${jiraMajorVersion}`,
             processed,
             totalItems
           );
@@ -207,8 +208,8 @@ export class Stage2DownloadLatest {
           await this.jobManager.log(
             jobId,
             LogLevel.INFO,
-            `Downloading ${processed}/${totalItems}: ${plugin.addonKey} v${latestVersion.version} for Jira ${jiraVersion}`,
-            { addonKey: plugin.addonKey, jiraVersion, progress: `${processed}/${totalItems}` }
+            `Downloading ${processed}/${totalItems}: ${plugin.addonKey} v${latestVersion.version} for Jira ${jiraMajorVersion}.x`,
+            { addonKey: plugin.addonKey, jiraMajorVersion, progress: `${processed}/${totalItems}` }
           );
 
           await this.queue.add(() => this.downloadVersion(jobId, plugin, latestVersion));
@@ -232,13 +233,10 @@ export class Stage2DownloadLatest {
     }
   }
 
-  private findLatestCompatibleVersion(versions: any[], targetJiraVersion: string): any | null {
+  private findLatestCompatibleVersionForMajor(versions: any[], targetJiraMajor: number): any | null {
     if (versions.length === 0) {
       return null;
     }
-
-    // Parse target Jira version (e.g., "8.13" -> major: 8, minor: 13)
-    const [targetMajor, targetMinor] = targetJiraVersion.split('.').map(Number);
 
     // Try to find versions with explicit Jira compatibility data
     const compatibleVersions = versions.filter((v) => {
@@ -246,13 +244,12 @@ export class Stage2DownloadLatest {
         const minVer = v.jiraMin ? this.parseVersion(v.jiraMin) : { major: 0, minor: 0 };
         const maxVer = v.jiraMax ? this.parseVersion(v.jiraMax) : { major: 999, minor: 999 };
 
-        // Check if target version is within the range
-        const isAboveMin = targetMajor > minVer.major ||
-                          (targetMajor === minVer.major && targetMinor >= minVer.minor);
-        const isBelowMax = targetMajor < maxVer.major ||
-                          (targetMajor === maxVer.major && targetMinor <= maxVer.minor);
+        // Check if the target major version falls within the compatibility range
+        // A version is compatible with Jira X.x if:
+        // - minVer.major <= X <= maxVer.major
+        const isCompatible = minVer.major <= targetJiraMajor && targetJiraMajor <= maxVer.major;
 
-        return isAboveMin && isBelowMax;
+        return isCompatible;
       }
       // If no compatibility info, we can't determine compatibility
       return false;
@@ -262,10 +259,9 @@ export class Stage2DownloadLatest {
       return compatibleVersions[0]; // Already sorted by releaseDate desc
     }
 
-    // If no version has compatibility data, return the latest version
-    // This is a fallback - ideally all versions should have compatibility data
-    console.warn(`No compatibility data found for Jira ${targetJiraVersion}, returning latest version`);
-    return versions[0];
+    // If no version has compatibility data, log a warning and return null
+    console.warn(`No compatible version found for Jira ${targetJiraMajor}.x`);
+    return null;
   }
 
   private parseVersion(versionString: string): { major: number; minor: number } {

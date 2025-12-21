@@ -70,11 +70,16 @@ export class Stage3DownloadAll {
 
   private async runBatch(jobId: string, batchNumber: number): Promise<void> {
     try {
+      // Only download versions that have metadata (jiraMin or jiraMax populated from Stage 1)
       const versions = await prisma.pluginVersion.findMany({
         where: {
           dataCenterCompatible: true,
           downloadUrl: { not: null },
           plugin: { batchNumber },
+          OR: [
+            { jiraMin: { not: null } },
+            { jiraMax: { not: null } },
+          ],
         },
         include: {
           plugin: true,
@@ -85,7 +90,7 @@ export class Stage3DownloadAll {
       await this.jobManager.log(
         jobId,
         LogLevel.INFO,
-        `Found ${versions.length} versions in batch ${batchNumber}`
+        `Found ${versions.length} versions with metadata in batch ${batchNumber}`
       );
 
       let processed = 0;
@@ -135,18 +140,30 @@ export class Stage3DownloadAll {
 
   private async run(jobId: string): Promise<void> {
     try {
-      await this.jobManager.log(jobId, LogLevel.INFO, 'Starting download of all versions');
+      await this.jobManager.log(jobId, LogLevel.INFO, 'Starting download of all versions with metadata');
 
+      // Only download versions that have metadata (jiraMin or jiraMax populated from Stage 1)
+      // This ensures we only download versions that were processed in Stage 1
       const versions = await prisma.pluginVersion.findMany({
         where: {
           dataCenterCompatible: true,
           downloadUrl: { not: null },
+          OR: [
+            { jiraMin: { not: null } },
+            { jiraMax: { not: null } },
+          ],
         },
         include: {
           plugin: true,
           files: true,
         },
       });
+
+      await this.jobManager.log(
+        jobId,
+        LogLevel.INFO,
+        `Found ${versions.length} versions with metadata to download`
+      );
 
       await this.jobManager.updateProgress(jobId, { totalItems: versions.length });
 
@@ -177,7 +194,7 @@ export class Stage3DownloadAll {
 
         await this.jobManager.addProgress(
           jobId,
-          'Downloading all versions',
+          'Downloading all versions with metadata',
           `Downloading ${processed}/${versions.length}: ${version.plugin.addonKey} v${version.version}`,
           `${version.plugin.addonKey}@${version.version}`,
           processed,

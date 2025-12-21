@@ -73,18 +73,6 @@ export interface MarketplaceListResponse {
   size?: number; // Legacy field (might not be present)
 }
 
-export interface VersionHistoryEntry {
-  version: string;
-  releaseDate?: Date;
-  releaseNotes?: string;
-  jiraMin?: string;
-  jiraMax?: string;
-  dataCenterCompatible: boolean;
-  downloadUrl?: string;
-  hidden: boolean;
-  deprecated: boolean;
-}
-
 export interface DownloadTask {
   pluginId: string;
   addonKey: string;

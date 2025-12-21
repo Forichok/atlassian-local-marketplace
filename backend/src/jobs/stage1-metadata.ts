@@ -1,7 +1,6 @@
 import { SyncStage, LogLevel } from '@prisma/client';
 import { JobManager } from '../services/job-manager';
 import { MarketplaceClient } from '../services/marketplace-client';
-import { HtmlParser } from '../services/html-parser';
 import { prisma } from '../lib/prisma';
 import { config } from '../config';
 import { createLogger } from '../lib/logger';
@@ -11,14 +10,12 @@ const logger = createLogger('Stage1MetadataIngestion');
 export class Stage1MetadataIngestion {
   private jobManager: JobManager;
   private marketplaceClient: MarketplaceClient;
-  private htmlParser: HtmlParser;
   private autoStartTimer: NodeJS.Timeout | null = null;
 
   constructor() {
     logger.info('Initializing Stage1MetadataIngestion');
     this.jobManager = new JobManager();
     this.marketplaceClient = new MarketplaceClient();
-    this.htmlParser = new HtmlParser();
   }
 
   cancelAutoStart(): void {
@@ -401,11 +398,6 @@ export class Stage1MetadataIngestion {
         { addonKey: addon.key }
       );
 
-      // Extract self link - it can be a string or an object with href
-      const selfLink = typeof addon._links?.self === 'string'
-        ? addon._links.self
-        : addon._links?.self?.href;
-
       // Extract app ID from alternate link (e.g., "/apps/1213645/...")
       const alternateLink = typeof addon._links?.alternate === 'string'
         ? addon._links.alternate
@@ -439,28 +431,48 @@ export class Stage1MetadataIngestion {
       });
 
       try {
-        const versions = await this.marketplaceClient.fetchAddonVersions(addon.key);
+        // Fetch only last 25 versions to reduce API load and processing time
+        const versions = await this.marketplaceClient.fetchAddonVersions(addon.key, 25);
 
-        for (const version of versions) {
-          // Extract buildNumber from _links.self.href (e.g., "/versions/build/1009990")
-          const selfLink = typeof version._links?.self === 'string'
-            ? version._links.self
-            : (version._links?.self as any)?.href;
+        await this.jobManager.log(
+          jobId,
+          LogLevel.INFO,
+          `Fetched ${versions.length} latest versions for ${addon.key}`,
+          { addonKey: addon.key, versionCount: versions.length }
+        );
 
-          const buildNumber = selfLink?.match(/\/build\/(\d+)$/)?.[1];
+        // Process all versions in parallel for maximum speed
+        await Promise.all(
+          versions.map(async (version) => {
+            try {
+              // Extract buildNumber from _links.self.href (e.g., "/versions/build/1009990")
+              const selfLink = typeof version._links?.self === 'string'
+                ? version._links.self
+                : (version._links?.self as any)?.href;
 
-          if (buildNumber) {
-            const fullVersion = await this.marketplaceClient.fetchVersionDetails(addon.key, parseInt(buildNumber));
-            if (fullVersion) {
-              await this.processVersion(jobId, plugin.id, fullVersion);
-            } else {
-              // Fallback to basic version if details fetch fails
-              await this.processVersion(jobId, plugin.id, version);
+              const buildNumber = selfLink?.match(/\/build\/(\d+)$/)?.[1];
+
+              if (buildNumber) {
+                const fullVersion = await this.marketplaceClient.fetchVersionDetails(addon.key, parseInt(buildNumber));
+                if (fullVersion) {
+                  await this.processVersion(jobId, plugin.id, fullVersion);
+                } else {
+                  // Fallback to basic version if details fetch fails
+                  await this.processVersion(jobId, plugin.id, version);
+                }
+              } else {
+                await this.processVersion(jobId, plugin.id, version);
+              }
+            } catch (error) {
+              // Log individual version processing errors but don't fail the whole batch
+              await this.jobManager.log(
+                jobId,
+                LogLevel.WARN,
+                `Failed to process version ${version.name} for ${addon.key}: ${error instanceof Error ? error.message : String(error)}`
+              );
             }
-          } else {
-            await this.processVersion(jobId, plugin.id, version);
-          }
-        }
+          })
+        );
       } catch (error) {
         await this.jobManager.log(
           jobId,
@@ -469,52 +481,6 @@ export class Stage1MetadataIngestion {
         );
       }
 
-      if (selfLink) {
-        const slug = addon.key.replace(/\./g, '-');
-
-        try {
-          const versionHistory = await this.htmlParser.parseVersionHistory(appId, slug);
-
-          for (const versionEntry of versionHistory) {
-            await prisma.pluginVersion.upsert({
-              where: {
-                pluginId_version: {
-                  pluginId: plugin.id,
-                  version: versionEntry.version,
-                },
-              },
-              create: {
-                pluginId: plugin.id,
-                version: versionEntry.version,
-                releaseDate: versionEntry.releaseDate,
-                jiraMin: versionEntry.jiraMin,
-                jiraMax: versionEntry.jiraMax,
-                dataCenterCompatible: versionEntry.dataCenterCompatible,
-                releaseNotes: versionEntry.releaseNotes,
-                hidden: versionEntry.hidden,
-                deprecated: versionEntry.deprecated,
-                downloadUrl: versionEntry.downloadUrl,
-              },
-              update: {
-                releaseDate: versionEntry.releaseDate,
-                jiraMin: versionEntry.jiraMin,
-                jiraMax: versionEntry.jiraMax,
-                dataCenterCompatible: versionEntry.dataCenterCompatible,
-                releaseNotes: versionEntry.releaseNotes,
-                hidden: versionEntry.hidden,
-                deprecated: versionEntry.deprecated,
-                downloadUrl: versionEntry.downloadUrl,
-              },
-            });
-          }
-        } catch (error) {
-          await this.jobManager.log(
-            jobId,
-            LogLevel.WARN,
-            `Failed to parse version history for ${addon.key}: ${error instanceof Error ? error.message : String(error)}`
-          );
-        }
-      }
 
       await this.jobManager.incrementProcessed(jobId);
       // Reset consecutive errors on successful processing
