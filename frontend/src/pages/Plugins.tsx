@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { pluginsApi } from '../api/client';
 import { Plugin } from '../types';
 import { PluginCardSkeleton } from '../components/PluginCardSkeleton';
@@ -8,10 +8,15 @@ import { AnimatedNumber } from '../components/AnimatedNumber';
 
 export const Plugins: React.FC = () => {
   const navigate = useNavigate();
+  const [searchParams, setSearchParams] = useSearchParams();
   const [plugins, setPlugins] = useState<Plugin[]>([]);
-  const [search, setSearch] = useState('');
-  const [jiraVersion, setJiraVersion] = useState<number | undefined>(9);
-  const [page, setPage] = useState(1);
+  const [search, setSearch] = useState(searchParams.get('search') || '');
+  const [jiraVersion, setJiraVersion] = useState<number | undefined>(
+    searchParams.get('jiraVersion') ? parseInt(searchParams.get('jiraVersion')!, 10) : 9
+  );
+  const [page, setPage] = useState(
+    searchParams.get('page') ? parseInt(searchParams.get('page')!, 10) : 1
+  );
   const [totalPages, setTotalPages] = useState(1);
   const [loading, setLoading] = useState(true);
 
@@ -32,6 +37,23 @@ export const Plugins: React.FC = () => {
       setLoading(false);
     }
   };
+
+  // Sync state to URL query parameters
+  useEffect(() => {
+    const params: Record<string, string> = {};
+
+    if (search) {
+      params.search = search;
+    }
+    if (jiraVersion !== undefined) {
+      params.jiraVersion = jiraVersion.toString();
+    }
+    if (page > 1) {
+      params.page = page.toString();
+    }
+
+    setSearchParams(params, { replace: true });
+  }, [search, jiraVersion, page, setSearchParams]);
 
   useEffect(() => {
     fetchPlugins();
