@@ -398,8 +398,8 @@ router.get('/stats/summary', async (req: Request, res: Response) => {
     const [totalPlugins, totalVersions, totalFiles, downloadedFiles, sizeStats] = await Promise.all([
       prisma.plugin.count(),
       prisma.pluginVersion.count(),
-      // Count only JAR files (files with downloadUrl)
-      prisma.pluginFile.count({ where: { downloadUrl: { not: null } } }),
+      // Count all versions with downloadUrl (JAR files available in marketplace)
+      prisma.pluginVersion.count({ where: { downloadUrl: { not: null } } }),
       // Count only downloaded JAR files
       prisma.pluginFile.count({
         where: {
