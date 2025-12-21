@@ -116,6 +116,23 @@ router.post('/metadata/cancel-auto-start', async (req: Request, res: Response) =
   }
 });
 
+router.post('/metadata/restart', async (req: Request, res: Response) => {
+  try {
+    logger.info('API: Metadata ingestion restart requested');
+    stage1.restart().catch((error) => {
+      logger.error('Metadata ingestion restart failed', { error: error.message });
+    });
+    res.json({ success: true, message: 'Metadata ingestion restarted' });
+    logger.info('API: Metadata ingestion restarted successfully');
+  } catch (error) {
+    logger.error('API: Failed to restart metadata ingestion', {
+      error: (error as Error).message,
+      stack: (error as Error).stack,
+    });
+    res.status(400).json({ error: (error as Error).message });
+  }
+});
+
 router.post('/download-latest/start', async (req: Request, res: Response) => {
   try {
     logger.info('API: Download latest start requested');
@@ -165,6 +182,22 @@ router.post('/download-latest/resume', async (req: Request, res: Response) => {
   }
 });
 
+router.post('/download-latest/restart', async (req: Request, res: Response) => {
+  try {
+    logger.info('API: Download latest restart requested');
+    stage2.restart().catch((error) => {
+      logger.error('Download latest restart failed', { error: error.message });
+    });
+    res.json({ success: true, message: 'Latest version download restarted' });
+    logger.info('API: Latest version download restarted successfully');
+  } catch (error) {
+    logger.error('API: Failed to restart latest version download', {
+      error: (error as Error).message,
+      stack: (error as Error).stack,
+    });
+    res.status(400).json({ error: (error as Error).message });
+  }
+});
 
 router.post('/download-all/start', async (req: Request, res: Response) => {
   try {
@@ -208,6 +241,23 @@ router.post('/download-all/resume', async (req: Request, res: Response) => {
     logger.info('API: All versions download resumed successfully');
   } catch (error) {
     logger.error('API: Failed to resume all versions download', {
+      error: (error as Error).message,
+      stack: (error as Error).stack,
+    });
+    res.status(400).json({ error: (error as Error).message });
+  }
+});
+
+router.post('/download-all/restart', async (req: Request, res: Response) => {
+  try {
+    logger.info('API: Download all restart requested');
+    stage3.restart().catch((error) => {
+      logger.error('Download all restart failed', { error: error.message });
+    });
+    res.json({ success: true, message: 'All versions download restarted' });
+    logger.info('API: All versions download restarted successfully');
+  } catch (error) {
+    logger.error('API: Failed to restart all versions download', {
       error: (error as Error).message,
       stack: (error as Error).stack,
     });

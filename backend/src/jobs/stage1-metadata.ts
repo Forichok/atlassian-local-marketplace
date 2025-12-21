@@ -127,6 +127,25 @@ export class Stage1MetadataIngestion {
     await this.run(job.id);
   }
 
+  async restart(): Promise<void> {
+    logger.info('Restarting Stage 1: Metadata Ingestion');
+
+    const job = await this.jobManager.getJobByStage(SyncStage.METADATA_INGESTION);
+
+    if (job && job.status === 'RUNNING') {
+      logger.warn('Cannot restart: job is currently running');
+      throw new Error('Cannot restart while job is running. Please pause it first.');
+    }
+
+    // Create a new job (this will clear errors and reset progress)
+    const newJobId = await this.jobManager.createFreshJob(SyncStage.METADATA_INGESTION);
+
+    logger.info('Created fresh job for restart', { jobId: newJobId });
+
+    await this.jobManager.startJob(newJobId);
+    await this.run(newJobId);
+  }
+
   private async isPluginAlreadyProcessed(jobId: string, addonKey: string): Promise<boolean> {
     const job = await this.jobManager.getJob(jobId);
     if (!job || !job.startedAt) {

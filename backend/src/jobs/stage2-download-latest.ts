@@ -58,6 +58,20 @@ export class Stage2DownloadLatest {
     await this.run(job.id);
   }
 
+  async restart(): Promise<void> {
+    const job = await this.jobManager.getJobByStage(SyncStage.DOWNLOAD_LATEST);
+
+    if (job && job.status === 'RUNNING') {
+      throw new Error('Cannot restart while job is running. Please pause it first.');
+    }
+
+    // Create a new job (this will clear errors and reset progress)
+    const newJobId = await this.jobManager.createFreshJob(SyncStage.DOWNLOAD_LATEST);
+
+    await this.jobManager.startJob(newJobId);
+    await this.run(newJobId);
+  }
+
   async processBatch(batchNumber: number): Promise<void> {
     const jobId = await this.jobManager.getOrCreateJob(SyncStage.DOWNLOAD_LATEST);
     await this.jobManager.log(

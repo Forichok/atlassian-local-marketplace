@@ -61,6 +61,31 @@ export class JobManager {
     return job.id;
   }
 
+  async createFreshJob(stage: SyncStage): Promise<string> {
+    logger.info('Creating fresh job', { stage });
+
+    const job = await prisma.syncJob.create({
+      data: {
+        stage,
+        status: JobStatus.IDLE,
+        totalItems: 0,
+        processedItems: 0,
+        failedItems: 0,
+        currentOffset: 0,
+        consecutiveErrors: 0,
+        failedPluginKeys: [],
+      },
+    });
+
+    logger.info('Fresh job created successfully', {
+      stage,
+      jobId: job.id,
+      status: job.status,
+    });
+
+    return job.id;
+  }
+
   async getJob(jobId: string) {
     return prisma.syncJob.findUnique({
       where: { id: jobId },

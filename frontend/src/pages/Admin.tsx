@@ -210,13 +210,25 @@ export const Admin: React.FC = () => {
               ⏸ Pause
             </button>
           ) : syncStatus?.metadata?.status === 'PAUSED' ? (
-            <button className="button" onClick={() => handleAction(syncApi.resumeMetadata, 'Resume metadata sync')}>
-              ▶️ Resume
-            </button>
+            <>
+              <button className="button" onClick={() => handleAction(syncApi.resumeMetadata, 'Resume metadata sync')}>
+                ▶️ Resume
+              </button>
+              <button className="button secondary" onClick={() => handleAction(syncApi.restartMetadata, 'Restart metadata sync')}>
+                🔄 Restart
+              </button>
+            </>
           ) : (
-            <button className="button" onClick={() => handleAction(syncApi.startMetadata, 'Start metadata sync')}>
-              ▶️ Start
-            </button>
+            <>
+              <button className="button" onClick={() => handleAction(syncApi.startMetadata, 'Start metadata sync')}>
+                ▶️ Start
+              </button>
+              {syncStatus?.metadata && (
+                <button className="button secondary" onClick={() => handleAction(syncApi.restartMetadata, 'Restart metadata sync')}>
+                  🔄 Restart
+                </button>
+              )}
+            </>
           )}
         </div>
 
@@ -320,13 +332,25 @@ export const Admin: React.FC = () => {
               ⏸ Pause
             </button>
           ) : syncStatus?.downloadLatest?.status === 'PAUSED' ? (
-            <button className="button" onClick={() => handleAction(syncApi.resumeDownloadLatest, 'Resume latest downloads')}>
-              ▶️ Resume
-            </button>
+            <>
+              <button className="button" onClick={() => handleAction(syncApi.resumeDownloadLatest, 'Resume latest downloads')}>
+                ▶️ Resume
+              </button>
+              <button className="button secondary" onClick={() => handleAction(syncApi.restartDownloadLatest, 'Restart latest downloads')}>
+                🔄 Restart
+              </button>
+            </>
           ) : (
-            <button className="button" onClick={() => handleAction(syncApi.startDownloadLatest, 'Start latest downloads')}>
-              ▶️ Start
-            </button>
+            <>
+              <button className="button" onClick={() => handleAction(syncApi.startDownloadLatest, 'Start latest downloads')}>
+                ▶️ Start
+              </button>
+              {syncStatus?.downloadLatest && (
+                <button className="button secondary" onClick={() => handleAction(syncApi.restartDownloadLatest, 'Restart latest downloads')}>
+                  🔄 Restart
+                </button>
+              )}
+            </>
           )}
         </div>
 
@@ -430,13 +454,25 @@ export const Admin: React.FC = () => {
               ⏸ Pause
             </button>
           ) : syncStatus?.downloadAll?.status === 'PAUSED' ? (
-            <button className="button" onClick={() => handleAction(syncApi.resumeDownloadAll, 'Resume all downloads')}>
-              ▶️ Resume
-            </button>
+            <>
+              <button className="button" onClick={() => handleAction(syncApi.resumeDownloadAll, 'Resume all downloads')}>
+                ▶️ Resume
+              </button>
+              <button className="button secondary" onClick={() => handleAction(syncApi.restartDownloadAll, 'Restart all downloads')}>
+                🔄 Restart
+              </button>
+            </>
           ) : (
-            <button className="button" onClick={() => handleAction(syncApi.startDownloadAll, 'Start all downloads')}>
-              ▶️ Start
-            </button>
+            <>
+              <button className="button" onClick={() => handleAction(syncApi.startDownloadAll, 'Start all downloads')}>
+                ▶️ Start
+              </button>
+              {syncStatus?.downloadAll && (
+                <button className="button secondary" onClick={() => handleAction(syncApi.restartDownloadAll, 'Restart all downloads')}>
+                  🔄 Restart
+                </button>
+              )}
+            </>
           )}
         </div>
 

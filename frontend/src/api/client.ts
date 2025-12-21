@@ -15,14 +15,17 @@ export const syncApi = {
   startMetadata: () => api.post('/api/sync/metadata/start'),
   pauseMetadata: () => api.post('/api/sync/metadata/pause'),
   resumeMetadata: () => api.post('/api/sync/metadata/resume'),
+  restartMetadata: () => api.post('/api/sync/metadata/restart'),
 
   startDownloadLatest: () => api.post('/api/sync/download-latest/start'),
   pauseDownloadLatest: () => api.post('/api/sync/download-latest/pause'),
   resumeDownloadLatest: () => api.post('/api/sync/download-latest/resume'),
+  restartDownloadLatest: () => api.post('/api/sync/download-latest/restart'),
 
   startDownloadAll: () => api.post('/api/sync/download-all/start'),
   pauseDownloadAll: () => api.post('/api/sync/download-all/pause'),
   resumeDownloadAll: () => api.post('/api/sync/download-all/resume'),
+  restartDownloadAll: () => api.post('/api/sync/download-all/restart'),
 };
 
 export const pluginsApi = {
