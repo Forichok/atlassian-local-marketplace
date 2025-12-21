@@ -71,15 +71,52 @@ router.get('/', async (req: Request, res: Response) => {
       prisma.plugin.count({ where }),
     ]);
 
-    // Calculate total size for each plugin
-    const pluginsWithSize = plugins.map(plugin => {
+    // Calculate total size and supported Jira versions for each plugin
+    const pluginsWithMetadata = await Promise.all(plugins.map(async plugin => {
       const totalSize = plugin.files.reduce((sum, file) => sum + (file.size ? Number(file.size) : 0), 0);
+
+      // Get all versions to determine supported Jira versions
+      const allVersions = await prisma.pluginVersion.findMany({
+        where: {
+          pluginId: plugin.id,
+          dataCenterCompatible: true,
+        },
+        select: {
+          jiraMin: true,
+          jiraMax: true,
+        },
+      });
+
+      // Calculate which Jira major versions are supported (8, 9, 10, 11)
+      const supportedVersions = new Set<number>();
+      const jiraVersionsToCheck = [8, 9, 10, 11];
+
+      for (const version of allVersions) {
+        if (!version.jiraMin && !version.jiraMax) {
+          // If no min/max specified, assume it supports all versions
+          jiraVersionsToCheck.forEach(v => supportedVersions.add(v));
+        } else {
+          const min = version.jiraMin ? parseInt(version.jiraMin.split('.')[0]) : 0;
+          const max = version.jiraMax ? parseInt(version.jiraMax.split('.')[0]) : 999;
+
+          for (const jiraVersion of jiraVersionsToCheck) {
+            if (min <= jiraVersion && max >= jiraVersion) {
+              supportedVersions.add(jiraVersion);
+            }
+          }
+        }
+      }
+
       const { files, ...rest } = plugin;
-      return { ...rest, totalSize };
-    });
+      return {
+        ...rest,
+        totalSize,
+        supportedJiraVersions: Array.from(supportedVersions).sort()
+      };
+    }));
 
     res.json({
-      plugins: pluginsWithSize,
+      plugins: pluginsWithMetadata,
       pagination: {
         page: pageNum,
         limit: limitNum,
@@ -361,10 +398,20 @@ router.get('/stats/summary', async (req: Request, res: Response) => {
     const [totalPlugins, totalVersions, totalFiles, downloadedFiles, sizeStats] = await Promise.all([
       prisma.plugin.count(),
       prisma.pluginVersion.count(),
-      prisma.pluginFile.count(),
-      prisma.pluginFile.count({ where: { downloadStatus: 'COMPLETED' } }),
+      // Count only JAR files (files with downloadUrl)
+      prisma.pluginFile.count({ where: { downloadUrl: { not: null } } }),
+      // Count only downloaded JAR files
+      prisma.pluginFile.count({
+        where: {
+          downloadStatus: 'COMPLETED',
+          downloadUrl: { not: null }
+        }
+      }),
       prisma.pluginFile.aggregate({
-        where: { downloadStatus: 'COMPLETED' },
+        where: {
+          downloadStatus: 'COMPLETED',
+          downloadUrl: { not: null }
+        },
         _sum: { size: true },
       }),
     ]);

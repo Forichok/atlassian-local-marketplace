@@ -13,10 +13,11 @@ export const PluginDetail: React.FC = () => {
   const navigate = useNavigate();
   const { showToast } = useToast();
   const [plugin, setPlugin] = useState<Plugin | null>(null);
-  const [jiraVersion, setJiraVersion] = useState<number | undefined>(9);
+  const [jiraVersion, setJiraVersion] = useState<number | undefined>(undefined);
   const [loading, setLoading] = useState(true);
   const [resyncing, setResyncing] = useState(false);
   const [selectedVersion, setSelectedVersion] = useState<PluginVersion | null>(null);
+  const [visibleVersionsCount, setVisibleVersionsCount] = useState(5);
 
   useEffect(() => {
     const fetchPlugin = async () => {
@@ -96,6 +97,41 @@ export const PluginDetail: React.FC = () => {
 
     return min <= jiraVersion && max >= jiraVersion;
   });
+
+  const visibleVersions = filteredVersions?.slice(0, visibleVersionsCount);
+  const hasMoreVersions = filteredVersions && filteredVersions.length > visibleVersionsCount;
+
+  const handleLoadMore = () => {
+    setVisibleVersionsCount(prev => prev + 10);
+  };
+
+  // Calculate supported Jira versions from all plugin versions
+  const supportedJiraVersions = React.useMemo(() => {
+    if (!plugin?.versions) return [];
+
+    const supportedVersions = new Set<number>();
+    const jiraVersionsToCheck = [8, 9, 10, 11];
+
+    for (const version of plugin.versions) {
+      if (!version.dataCenterCompatible) continue;
+
+      if (!version.jiraMin && !version.jiraMax) {
+        // If no min/max specified, assume it supports all versions
+        jiraVersionsToCheck.forEach(v => supportedVersions.add(v));
+      } else {
+        const min = version.jiraMin ? parseInt(version.jiraMin.split('.')[0]) : 0;
+        const max = version.jiraMax ? parseInt(version.jiraMax.split('.')[0]) : 999;
+
+        for (const jiraVer of jiraVersionsToCheck) {
+          if (min <= jiraVer && max >= jiraVer) {
+            supportedVersions.add(jiraVer);
+          }
+        }
+      }
+    }
+
+    return Array.from(supportedVersions).sort();
+  }, [plugin?.versions]);
 
   if (loading) {
     return (
@@ -188,6 +224,52 @@ export const PluginDetail: React.FC = () => {
             {plugin.summary}
           </p>
         )}
+
+        {/* Supported Jira Versions */}
+        {supportedJiraVersions.length > 0 && (
+          <div style={{
+            display: 'flex',
+            gap: '8px',
+            alignItems: 'center',
+            marginBottom: '15px',
+            position: 'relative',
+            zIndex: 1,
+            flexWrap: 'wrap'
+          }}>
+            <span style={{
+              fontSize: '14px',
+              fontWeight: 600,
+              color: 'var(--color-text-secondary)'
+            }}>
+              Supported Jira Versions:
+            </span>
+            {supportedJiraVersions.map(version => (
+              <span
+                key={version}
+                style={{
+                  background: version === jiraVersion
+                    ? 'linear-gradient(135deg, #0052cc, #0065ff)'
+                    : 'rgba(0, 82, 204, 0.12)',
+                  color: version === jiraVersion ? 'white' : '#0052cc',
+                  padding: '6px 12px',
+                  borderRadius: '6px',
+                  fontSize: '13px',
+                  fontWeight: 700,
+                  border: version === jiraVersion
+                    ? '1px solid rgba(0, 82, 204, 0.3)'
+                    : '1px solid rgba(0, 82, 204, 0.2)',
+                  boxShadow: version === jiraVersion
+                    ? '0 2px 8px rgba(0, 82, 204, 0.3)'
+                    : 'none',
+                  transition: 'all 0.2s'
+                }}
+              >
+                Jira {version}
+              </span>
+            ))}
+          </div>
+        )}
+
         <div style={{
           fontSize: '14px',
           color: 'var(--color-text-secondary)',
@@ -283,141 +365,158 @@ export const PluginDetail: React.FC = () => {
         {!filteredVersions || filteredVersions.length === 0 ? (
           <p>No compatible versions found{jiraVersion ? ` for Jira ${jiraVersion}` : ''}</p>
         ) : (
-          <table className="table">
-            <thead>
-              <tr>
-                <th>Version</th>
-                <th>Release Date</th>
-                <th>Size</th>
-                <th>Jira Compatibility</th>
-                <th>Status</th>
-                <th>Actions</th>
-              </tr>
-            </thead>
-            <tbody>
-              {filteredVersions.map((version) => {
-                const file = version.files?.[0];
-                const canDownload = file?.downloadStatus === 'COMPLETED';
-                const size = file?.size ? Number(file.size) : 0;
-                const sizeInMB = size > 0 ? (size / 1024 / 1024).toFixed(2) : null;
+          <>
+            <table className="table">
+              <thead>
+                <tr>
+                  <th>Version</th>
+                  <th>Release Date</th>
+                  <th>Size</th>
+                  <th>Jira Compatibility</th>
+                  <th>Status</th>
+                  <th>Actions</th>
+                </tr>
+              </thead>
+              <tbody>
+                {visibleVersions?.map((version) => {
+                  const file = version.files?.[0];
+                  const canDownload = file?.downloadStatus === 'COMPLETED';
+                  const size = file?.size ? Number(file.size) : 0;
+                  const sizeInMB = size > 0 ? (size / 1024 / 1024).toFixed(2) : null;
 
-                return (
-                  <tr key={version.id}>
-                    <td>
-                      <strong
-                        style={{
-                          cursor: 'pointer',
-                          color: 'var(--color-primary)',
-                          textDecoration: 'underline',
-                        }}
-                        onClick={() => setSelectedVersion(version)}
-                      >
-                        {version.version}
-                      </strong>
-                    </td>
-                    <td>
-                      {version.releaseDate
-                        ? new Date(version.releaseDate).toLocaleDateString()
-                        : 'N/A'}
-                    </td>
-                    <td>
-                      {sizeInMB ? (
-                        <span style={{
-                          background: 'rgba(0, 82, 204, 0.1)',
-                          padding: '4px 8px',
-                          borderRadius: '6px',
-                          fontWeight: 600,
-                          display: 'inline-block'
-                        }}>
-                          <AnimatedNumber
-                            value={parseFloat(sizeInMB)}
-                            decimals={2}
-                            formatter={(v) => `${v.toFixed(2)} MB`}
-                          />
-                        </span>
-                      ) : '-'}
-                    </td>
-                    <td>
-                      {version.jiraMin || version.jiraMax
-                        ? `${version.jiraMin || '?'} - ${version.jiraMax || '?'}`
-                        : 'All versions'}
-                    </td>
-                    <td>
-                      {file ? (
-                        <span className={`status-badge ${file.downloadStatus.toLowerCase()}`}>
-                          {file.downloadStatus}
-                        </span>
-                      ) : (
-                        <span className="status-badge idle">Not Downloaded</span>
-                      )}
-                    </td>
-                    <td>
-                      {canDownload ? (
-                        <NeonButton
-                          onClick={() => handleDownload(version.version)}
-                          variant="success"
-                          size="small"
+                  return (
+                    <tr key={version.id}>
+                      <td>
+                        <strong
+                          style={{
+                            cursor: 'pointer',
+                            color: 'var(--color-primary)',
+                            textDecoration: 'underline',
+                          }}
+                          onClick={() => setSelectedVersion(version)}
                         >
-                          ⬇️ Download
-                        </NeonButton>
-                      ) : file?.downloadStatus === 'FAILED' ? (
-                        <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', alignItems: 'flex-start' }}>
+                          {version.version}
+                        </strong>
+                      </td>
+                      <td>
+                        {version.releaseDate
+                          ? new Date(version.releaseDate).toLocaleDateString()
+                          : 'N/A'}
+                      </td>
+                      <td>
+                        {sizeInMB ? (
                           <span style={{
-                            fontSize: '12px',
-                            color: '#de350b',
-                            fontWeight: 600,
-                            background: 'rgba(222, 53, 11, 0.1)',
+                            background: 'rgba(0, 82, 204, 0.1)',
                             padding: '4px 8px',
-                            borderRadius: '6px'
+                            borderRadius: '6px',
+                            fontWeight: 600,
+                            display: 'inline-block'
                           }}>
-                            {file.errorMessage || 'Download failed'}
+                            <AnimatedNumber
+                              value={parseFloat(sizeInMB)}
+                              decimals={2}
+                              formatter={(v) => `${v.toFixed(2)} MB`}
+                            />
                           </span>
+                        ) : '-'}
+                      </td>
+                      <td>
+                        {version.jiraMin || version.jiraMax
+                          ? `${version.jiraMin || '?'} - ${version.jiraMax || '?'}`
+                          : 'All versions'}
+                      </td>
+                      <td>
+                        {file ? (
+                          <span className={`status-badge ${file.downloadStatus.toLowerCase()}`}>
+                            {file.downloadStatus}
+                          </span>
+                        ) : (
+                          <span className="status-badge idle">Not Downloaded</span>
+                        )}
+                      </td>
+                      <td>
+                        {canDownload ? (
                           <NeonButton
-                            onClick={() => handleForceDownload(version.version)}
-                            variant="warning"
+                            onClick={() => handleDownload(version.version)}
+                            variant="success"
                             size="small"
                           >
-                            🔄 Retry
+                            ⬇️ Download
                           </NeonButton>
-                        </div>
-                      ) : file?.downloadStatus === 'DOWNLOADING' ? (
-                        <span style={{
-                          fontSize: '13px',
-                          color: '#0052cc',
-                          fontWeight: 600,
-                          background: 'rgba(0, 82, 204, 0.1)',
-                          padding: '6px 12px',
-                          borderRadius: '8px',
-                          display: 'inline-flex',
-                          alignItems: 'center',
-                          gap: '6px'
-                        }}>
-                          <span className="loading-spinner" style={{
-                            width: '12px',
-                            height: '12px',
-                            border: '2px solid rgba(0, 82, 204, 0.2)',
-                            borderTopColor: '#0052cc',
-                            borderRadius: '50%',
-                            display: 'inline-block',
-                            animation: 'spin 1s linear infinite'
-                          }} />
-                          Downloading...
-                        </span>
-                      ) : (
-                        <NeonButton
-                          onClick={() => handleForceDownload(version.version)}
-                          variant="primary"
-                          size="small"
-                        >
-                          ⬇️ Force Download
-                        </NeonButton>
-                      )}
-                    </td>
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
+                        ) : file?.downloadStatus === 'FAILED' ? (
+                          <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', alignItems: 'flex-start' }}>
+                            <span style={{
+                              fontSize: '12px',
+                              color: '#de350b',
+                              fontWeight: 600,
+                              background: 'rgba(222, 53, 11, 0.1)',
+                              padding: '4px 8px',
+                              borderRadius: '6px'
+                            }}>
+                              {file.errorMessage || 'Download failed'}
+                            </span>
+                            <NeonButton
+                              onClick={() => handleForceDownload(version.version)}
+                              variant="warning"
+                              size="small"
+                            >
+                              🔄 Retry
+                            </NeonButton>
+                          </div>
+                        ) : file?.downloadStatus === 'DOWNLOADING' ? (
+                          <span style={{
+                            fontSize: '13px',
+                            color: '#0052cc',
+                            fontWeight: 600,
+                            background: 'rgba(0, 82, 204, 0.1)',
+                            padding: '6px 12px',
+                            borderRadius: '8px',
+                            display: 'inline-flex',
+                            alignItems: 'center',
+                            gap: '6px'
+                          }}>
+                            <span className="loading-spinner" style={{
+                              width: '12px',
+                              height: '12px',
+                              border: '2px solid rgba(0, 82, 204, 0.2)',
+                              borderTopColor: '#0052cc',
+                              borderRadius: '50%',
+                              display: 'inline-block',
+                              animation: 'spin 1s linear infinite'
+                            }} />
+                            Downloading...
+                          </span>
+                        ) : (
+                          <NeonButton
+                            onClick={() => handleForceDownload(version.version)}
+                            variant="primary"
+                            size="small"
+                          >
+                            ⬇️ Force Download
+                          </NeonButton>
+                        )}
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+            {hasMoreVersions && (
+              <div style={{
+                marginTop: '20px',
+                display: 'flex',
+                justifyContent: 'center'
+              }}>
+                <NeonButton
+                  onClick={handleLoadMore}
+                  variant="primary"
+                  size="medium"
+                >
+                  Load More ({filteredVersions.length - visibleVersionsCount} remaining)
+                </NeonButton>
+              </div>
+            )}
+          </>
         )}
       </div>
 

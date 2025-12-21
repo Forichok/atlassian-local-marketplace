@@ -7,6 +7,7 @@ export interface Plugin {
   summary?: string;
   marketplaceUrl?: string;
   totalSize?: number;
+  supportedJiraVersions?: number[];
   createdAt: string;
   updatedAt: string;
   versions?: PluginVersion[];

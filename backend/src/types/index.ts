@@ -94,3 +94,21 @@ export interface JobProgress {
   completedAt?: Date;
   pausedAt?: Date;
 }
+
+export interface PluginWithMetadata {
+  id: string;
+  addonKey: string;
+  appId?: string;
+  name: string;
+  vendor?: string;
+  summary?: string;
+  marketplaceUrl?: string;
+  totalSize?: number;
+  createdAt: string;
+  updatedAt: string;
+  supportedJiraVersions?: number[];
+  _count?: {
+    versions: number;
+    files: number;
+  };
+}

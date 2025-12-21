@@ -12,7 +12,7 @@ export const Plugins: React.FC = () => {
   const [plugins, setPlugins] = useState<Plugin[]>([]);
   const [search, setSearch] = useState(searchParams.get('search') || '');
   const [jiraVersion, setJiraVersion] = useState<number | undefined>(
-    searchParams.get('jiraVersion') ? parseInt(searchParams.get('jiraVersion')!, 10) : 9
+    searchParams.get('jiraVersion') ? parseInt(searchParams.get('jiraVersion')!, 10) : undefined
   );
   const [page, setPage] = useState(
     searchParams.get('page') ? parseInt(searchParams.get('page')!, 10) : 1
@@ -204,6 +204,53 @@ export const Plugins: React.FC = () => {
                 <h3 style={{ position: 'relative', zIndex: 1 }}>{plugin.name}</h3>
                 {plugin.vendor && <div className="vendor" style={{ position: 'relative', zIndex: 1 }}>by {plugin.vendor}</div>}
                 {plugin.summary && <div className="summary" style={{ position: 'relative', zIndex: 1 }}>{plugin.summary}</div>}
+
+                {/* Jira Version Tags */}
+                {plugin.supportedJiraVersions && plugin.supportedJiraVersions.length > 0 && (
+                  <div style={{
+                    display: 'flex',
+                    gap: '6px',
+                    marginTop: '8px',
+                    marginBottom: '8px',
+                    position: 'relative',
+                    zIndex: 1,
+                    flexWrap: 'wrap'
+                  }}>
+                    <span style={{
+                      fontSize: '11px',
+                      color: 'var(--color-text-secondary)',
+                      fontWeight: 600,
+                      alignSelf: 'center'
+                    }}>
+                      Jira:
+                    </span>
+                    {plugin.supportedJiraVersions.map(version => (
+                      <span
+                        key={version}
+                        style={{
+                          background: version === jiraVersion
+                            ? 'linear-gradient(135deg, #0052cc, #0065ff)'
+                            : 'rgba(0, 82, 204, 0.12)',
+                          color: version === jiraVersion ? 'white' : '#0052cc',
+                          padding: '3px 8px',
+                          borderRadius: '4px',
+                          fontSize: '11px',
+                          fontWeight: 700,
+                          border: version === jiraVersion
+                            ? '1px solid rgba(0, 82, 204, 0.3)'
+                            : '1px solid rgba(0, 82, 204, 0.2)',
+                          boxShadow: version === jiraVersion
+                            ? '0 2px 8px rgba(0, 82, 204, 0.3)'
+                            : 'none',
+                          transition: 'all 0.2s'
+                        }}
+                      >
+                        {version}
+                      </span>
+                    ))}
+                  </div>
+                )}
+
                 <div style={{
                   fontSize: '13px',
                   color: 'var(--color-text-tertiary)',
