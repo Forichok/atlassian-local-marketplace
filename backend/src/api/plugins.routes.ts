@@ -1,5 +1,6 @@
 import { Router, Request, Response } from 'express';
 import { prisma } from '../lib/prisma';
+import { ProductType } from '@prisma/client';
 
 const router = Router();
 
@@ -7,16 +8,22 @@ router.get('/', async (req: Request, res: Response) => {
   try {
     const {
       search,
-      jiraVersion,
+      productVersion, // Renamed from jiraVersion for universality
+      productType = 'JIRA',
       page = '1',
       limit = '20',
     } = req.query;
+
+    // Validate productType
+    const validProductType = (productType === 'JIRA' || productType === 'CONFLUENCE') ? productType as ProductType : 'JIRA';
 
     const pageNum = parseInt(page as string, 10);
     const limitNum = parseInt(limit as string, 10);
     const skip = (pageNum - 1) * limitNum;
 
-    const where: any = {};
+    const where: any = {
+      productType: validProductType,
+    };
 
     if (search) {
       where.OR = [
@@ -28,18 +35,18 @@ router.get('/', async (req: Request, res: Response) => {
 
     let versionWhere: any = { dataCenterCompatible: true };
 
-    if (jiraVersion) {
-      const version = parseInt(jiraVersion as string, 10);
+    if (productVersion) {
+      const version = parseInt(productVersion as string, 10);
       versionWhere = {
         ...versionWhere,
         OR: [
           {
             AND: [
-              { jiraMin: { lte: version.toString() } },
-              { jiraMax: { gte: version.toString() } },
+              { productVersionMin: { lte: version.toString() } },
+              { productVersionMax: { gte: version.toString() } },
             ],
           },
-          { jiraMin: null, jiraMax: null },
+          { productVersionMin: null, productVersionMax: null },
         ],
       };
     }
@@ -75,33 +82,36 @@ router.get('/', async (req: Request, res: Response) => {
     const pluginsWithMetadata = await Promise.all(plugins.map(async plugin => {
       const totalSize = plugin.files.reduce((sum, file) => sum + (file.size ? Number(file.size) : 0), 0);
 
-      // Get all versions to determine supported Jira versions
+      // Get all versions to determine supported product versions
       const allVersions = await prisma.pluginVersion.findMany({
         where: {
           pluginId: plugin.id,
           dataCenterCompatible: true,
         },
         select: {
-          jiraMin: true,
-          jiraMax: true,
+          productVersionMin: true,
+          productVersionMax: true,
         },
       });
 
-      // Calculate which Jira major versions are supported (8, 9, 10, 11)
+      const versionsToCheck = validProductType === 'JIRA'
+        ? [8, 9, 10, 11]
+        : [7.19, 8.5, 9.2, 10.2];
       const supportedVersions = new Set<number>();
-      const jiraVersionsToCheck = [8, 9, 10, 11];
 
-      for (const version of allVersions) {
-        if (!version.jiraMin && !version.jiraMax) {
-          // If no min/max specified, assume it supports all versions
-          jiraVersionsToCheck.forEach(v => supportedVersions.add(v));
+      for (const versionData of allVersions) {
+        const minStr = (versionData as any).productVersionMin;
+        const maxStr = (versionData as any).productVersionMax;
+
+        if (!minStr && !maxStr) {
+          versionsToCheck.forEach(v => supportedVersions.add(v));
         } else {
-          const min = version.jiraMin ? parseInt(version.jiraMin.split('.')[0]) : 0;
-          const max = version.jiraMax ? parseInt(version.jiraMax.split('.')[0]) : 999;
+          const min = minStr ? parseFloat(minStr) : 0;
+          const max = maxStr ? parseFloat(maxStr) : 999;
 
-          for (const jiraVersion of jiraVersionsToCheck) {
-            if (min <= jiraVersion && max >= jiraVersion) {
-              supportedVersions.add(jiraVersion);
+          for (const checkVersion of versionsToCheck) {
+            if (min <= checkVersion && max >= checkVersion) {
+              supportedVersions.add(checkVersion);
             }
           }
         }
@@ -111,7 +121,7 @@ router.get('/', async (req: Request, res: Response) => {
       return {
         ...rest,
         totalSize,
-        supportedJiraVersions: Array.from(supportedVersions).sort()
+        supportedProductVersions: Array.from(supportedVersions).sort()
       };
     }));
 
@@ -132,9 +142,16 @@ router.get('/', async (req: Request, res: Response) => {
 router.get('/:addonKey', async (req: Request, res: Response) => {
   try {
     const { addonKey } = req.params;
+    const { productType = 'JIRA' } = req.query;
 
-    const plugin = await prisma.plugin.findUnique({
-      where: { addonKey },
+    // Validate productType
+    const validProductType = (productType === 'JIRA' || productType === 'CONFLUENCE') ? productType as ProductType : 'JIRA';
+
+    const plugin = await prisma.plugin.findFirst({
+      where: {
+        addonKey,
+        productType: validProductType,
+      },
       include: {
         versions: {
           orderBy: { releaseDate: 'desc' },
@@ -158,10 +175,16 @@ router.get('/:addonKey', async (req: Request, res: Response) => {
 router.get('/:addonKey/versions', async (req: Request, res: Response) => {
   try {
     const { addonKey } = req.params;
-    const { jiraVersion } = req.query;
+    const { jiraVersion, productType = 'JIRA' } = req.query;
 
-    const plugin = await prisma.plugin.findUnique({
-      where: { addonKey },
+    // Validate productType
+    const validProductType = (productType === 'JIRA' || productType === 'CONFLUENCE') ? productType as ProductType : 'JIRA';
+
+    const plugin = await prisma.plugin.findFirst({
+      where: {
+        addonKey,
+        productType: validProductType,
+      },
     });
 
     if (!plugin) {
@@ -180,11 +203,11 @@ router.get('/:addonKey/versions', async (req: Request, res: Response) => {
         OR: [
           {
             AND: [
-              { jiraMin: { lte: version.toString() } },
-              { jiraMax: { gte: version.toString() } },
+              { productVersionMin: { lte: version.toString() } },
+              { productVersionMax: { gte: version.toString() } },
             ],
           },
-          { jiraMin: null, jiraMax: null },
+          { productVersionMin: null, productVersionMax: null },
         ],
       };
     }
@@ -206,9 +229,16 @@ router.get('/:addonKey/versions', async (req: Request, res: Response) => {
 router.get('/:addonKey/download/:version', async (req: Request, res: Response) => {
   try {
     const { addonKey, version } = req.params;
+    const { productType = 'JIRA' } = req.query;
 
-    const plugin = await prisma.plugin.findUnique({
-      where: { addonKey },
+    // Validate productType
+    const validProductType = (productType === 'JIRA' || productType === 'CONFLUENCE') ? productType as ProductType : 'JIRA';
+
+    const plugin = await prisma.plugin.findFirst({
+      where: {
+        addonKey,
+        productType: validProductType,
+      },
     });
 
     if (!plugin) {
@@ -241,9 +271,16 @@ router.get('/:addonKey/download/:version', async (req: Request, res: Response) =
 router.post('/:addonKey/force-download/:version', async (req: Request, res: Response) => {
   try {
     const { addonKey, version } = req.params;
+    const { productType = 'JIRA' } = req.query;
 
-    const plugin = await prisma.plugin.findUnique({
-      where: { addonKey },
+    // Validate productType
+    const validProductType = (productType === 'JIRA' || productType === 'CONFLUENCE') ? productType as ProductType : 'JIRA';
+
+    const plugin = await prisma.plugin.findFirst({
+      where: {
+        addonKey,
+        productType: validProductType,
+      },
       include: {
         versions: {
           where: { version },
@@ -270,7 +307,7 @@ router.post('/:addonKey/force-download/:version', async (req: Request, res: Resp
     const crypto = await import('crypto');
     const { config } = await import('../config');
 
-    const marketplaceClient = new MarketplaceClient();
+    const marketplaceClient = new MarketplaceClient(validProductType);
 
     // Run download in background
     (async () => {
@@ -369,9 +406,16 @@ router.post('/:addonKey/force-download/:version', async (req: Request, res: Resp
 router.post('/:addonKey/resync', async (req: Request, res: Response) => {
   try {
     const { addonKey } = req.params;
+    const { productType = 'JIRA' } = req.query;
 
-    const plugin = await prisma.plugin.findUnique({
-      where: { addonKey },
+    // Validate productType
+    const validProductType = (productType === 'JIRA' || productType === 'CONFLUENCE') ? productType as ProductType : 'JIRA';
+
+    const plugin = await prisma.plugin.findFirst({
+      where: {
+        addonKey,
+        productType: validProductType,
+      },
     });
 
     if (!plugin) {
@@ -380,7 +424,7 @@ router.post('/:addonKey/resync', async (req: Request, res: Response) => {
 
     // Import and execute the resync
     const { Stage1MetadataIngestion } = await import('../jobs/stage1-metadata');
-    const stage1 = new Stage1MetadataIngestion();
+    const stage1 = new Stage1MetadataIngestion(validProductType);
 
     // Run resync in background
     stage1.resyncPlugin(addonKey).catch((error) => {
@@ -395,22 +439,38 @@ router.post('/:addonKey/resync', async (req: Request, res: Response) => {
 
 router.get('/stats/summary', async (req: Request, res: Response) => {
   try {
+    const { productType = 'JIRA' } = req.query;
+
+    // Validate productType
+    const validProductType = (productType === 'JIRA' || productType === 'CONFLUENCE') ? productType as ProductType : 'JIRA';
+
     const [totalPlugins, totalVersions, totalFiles, downloadedFiles, sizeStats] = await Promise.all([
-      prisma.plugin.count(),
-      prisma.pluginVersion.count(),
+      prisma.plugin.count({ where: { productType: validProductType } }),
+      prisma.pluginVersion.count({
+        where: {
+          plugin: { productType: validProductType }
+        }
+      }),
       // Count all versions with downloadUrl (JAR files available in marketplace)
-      prisma.pluginVersion.count({ where: { downloadUrl: { not: null } } }),
+      prisma.pluginVersion.count({
+        where: {
+          downloadUrl: { not: null },
+          plugin: { productType: validProductType }
+        }
+      }),
       // Count only downloaded JAR files
       prisma.pluginFile.count({
         where: {
           downloadStatus: 'COMPLETED',
-          downloadUrl: { not: null }
+          downloadUrl: { not: null },
+          plugin: { productType: validProductType }
         }
       }),
       prisma.pluginFile.aggregate({
         where: {
           downloadStatus: 'COMPLETED',
-          downloadUrl: { not: null }
+          downloadUrl: { not: null },
+          plugin: { productType: validProductType }
         },
         _sum: { size: true },
       }),
@@ -424,6 +484,7 @@ router.get('/stats/summary', async (req: Request, res: Response) => {
       totalFiles,
       downloadedFiles,
       totalSize,
+      productType: validProductType,
     });
   } catch (error) {
     res.status(500).json({ error: (error as Error).message });

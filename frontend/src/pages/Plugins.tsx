@@ -1,14 +1,19 @@
 import React, { useEffect, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
-import { pluginsApi } from '../api/client';
+import { pluginsApi, ProductType } from '../api/client';
 import { Plugin } from '../types';
 import { PluginCardSkeleton } from '../components/PluginCardSkeleton';
 import { EmptyState } from '../components/EmptyState';
 import { AnimatedNumber } from '../components/AnimatedNumber';
+import { ProductSelector } from '../components/ProductSelector';
 
 export const Plugins: React.FC = () => {
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
+
+  const [selectedProduct, setSelectedProduct] = useState<ProductType>(
+    (searchParams.get('productType') as ProductType) || 'JIRA'
+  );
   const [plugins, setPlugins] = useState<Plugin[]>([]);
   const [search, setSearch] = useState(searchParams.get('search') || '');
   const [jiraVersion, setJiraVersion] = useState<number | undefined>(
@@ -26,6 +31,7 @@ export const Plugins: React.FC = () => {
       const response = await pluginsApi.getPlugins({
         search: search || undefined,
         jiraVersion,
+        productType: selectedProduct,
         page,
         limit: 20,
       });
@@ -38,7 +44,6 @@ export const Plugins: React.FC = () => {
     }
   };
 
-  // Sync state to URL query parameters
   useEffect(() => {
     const params: Record<string, string> = {};
 
@@ -48,22 +53,28 @@ export const Plugins: React.FC = () => {
     if (jiraVersion !== undefined) {
       params.jiraVersion = jiraVersion.toString();
     }
+    if (selectedProduct) {
+      params.productType = selectedProduct;
+    }
     if (page > 1) {
       params.page = page.toString();
     }
 
     setSearchParams(params, { replace: true });
-  }, [search, jiraVersion, page, setSearchParams]);
+  }, [search, jiraVersion, selectedProduct, page, setSearchParams]);
 
   useEffect(() => {
     fetchPlugins();
-  }, [search, jiraVersion, page]);
+  }, [search, jiraVersion, selectedProduct, page]);
 
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();
     setPage(1);
     fetchPlugins();
   };
+
+  const productIcon = selectedProduct === 'JIRA' ? '🔷' : '📘';
+  const productName = selectedProduct === 'JIRA' ? 'Jira' : 'Confluence';
 
   return (
     <div className="container">
@@ -91,9 +102,16 @@ export const Plugins: React.FC = () => {
             color: 'var(--color-text-secondary)',
             fontWeight: 500
           }}>
-            Browse and manage Jira Data Center plugins
+            Browse and manage {productName} Data Center plugins
           </p>
         </div>
+        <ProductSelector
+          selected={selectedProduct}
+          onChange={(product) => {
+            setSelectedProduct(product);
+            setPage(1);
+          }}
+        />
       </div>
 
       <form onSubmit={handleSearch} className="search-bar" style={{
@@ -107,7 +125,7 @@ export const Plugins: React.FC = () => {
         <input
           type="text"
           className="input"
-          placeholder="🔍 Search plugins by name, key, or vendor..."
+          placeholder={`🔍 Search ${productName} plugins by name, key, or vendor...`}
           value={search}
           onChange={(e) => setSearch(e.target.value)}
           style={{
@@ -119,7 +137,7 @@ export const Plugins: React.FC = () => {
           className="select"
           value={jiraVersion ?? ''}
           onChange={(e) => {
-            const value = e.target.value ? parseInt(e.target.value, 10) : undefined;
+            const value = e.target.value ? parseFloat(e.target.value) : undefined;
             setJiraVersion(value);
             setPage(1);
           }}
@@ -130,10 +148,21 @@ export const Plugins: React.FC = () => {
           }}
         >
           <option value="">All versions</option>
-          <option value={8}>Jira 8</option>
-          <option value={9}>Jira 9</option>
-          <option value={10}>Jira 10</option>
-          <option value={11}>Jira 11</option>
+          {selectedProduct === 'JIRA' ? (
+            <>
+              <option value={8}>Jira 8</option>
+              <option value={9}>Jira 9</option>
+              <option value={10}>Jira 10</option>
+              <option value={11}>Jira 11</option>
+            </>
+          ) : (
+            <>
+              <option value={7.19}>Confluence 7.19</option>
+              <option value={8.5}>Confluence 8.5</option>
+              <option value={9.2}>Confluence 9.2</option>
+              <option value={10.2}>Confluence 10.2</option>
+            </>
+          )}
         </select>
       </form>
 
@@ -142,8 +171,8 @@ export const Plugins: React.FC = () => {
       ) : plugins.length === 0 ? (
         <EmptyState
           title="No plugins found"
-          description="Try adjusting your search criteria or Jira version filter to find what you're looking for."
-          icon="🔌"
+          description={`Try adjusting your search criteria or ${productName} version filter to find what you're looking for.`}
+          icon={productIcon}
         />
       ) : (
         <>
@@ -155,7 +184,7 @@ export const Plugins: React.FC = () => {
               <div
                 key={plugin.id}
                 className="plugin-card"
-                onClick={() => navigate(`/plugins/${plugin.addonKey}`)}
+                onClick={() => navigate(`/plugins/${plugin.addonKey}?productType=${selectedProduct}`)}
                 style={{
                   animationDelay: `${index * 0.05}s`,
                   position: 'relative',
@@ -177,7 +206,6 @@ export const Plugins: React.FC = () => {
                   e.currentTarget.style.borderColor = 'rgba(255, 255, 255, 0.8)';
                 }}
               >
-                {/* Glassmorphism decorative orb */}
                 <div style={{
                   position: 'absolute',
                   top: '-50px',
@@ -189,7 +217,6 @@ export const Plugins: React.FC = () => {
                   pointerEvents: 'none'
                 }} />
 
-                {/* Gradient shine effect */}
                 <div style={{
                   position: 'absolute',
                   top: 0,
@@ -201,12 +228,27 @@ export const Plugins: React.FC = () => {
                   pointerEvents: 'none'
                 }} className="shine-effect" />
 
-                <h3 style={{ position: 'relative', zIndex: 1 }}>{plugin.name}</h3>
+                <div style={{
+                  display: 'flex',
+                  alignItems: 'flex-start',
+                  justifyContent: 'space-between',
+                  marginBottom: 'var(--space-sm)',
+                  position: 'relative',
+                  zIndex: 1
+                }}>
+                  <h3 style={{ margin: 0, flex: 1 }}>{plugin.name}</h3>
+                  <span style={{
+                    fontSize: '20px',
+                    marginLeft: 'var(--space-sm)'
+                  }}>
+                    {productIcon}
+                  </span>
+                </div>
+
                 {plugin.vendor && <div className="vendor" style={{ position: 'relative', zIndex: 1 }}>by {plugin.vendor}</div>}
                 {plugin.summary && <div className="summary" style={{ position: 'relative', zIndex: 1 }}>{plugin.summary}</div>}
 
-                {/* Jira Version Tags */}
-                {plugin.supportedJiraVersions && plugin.supportedJiraVersions.length > 0 && (
+                {plugin.supportedProductVersions && plugin.supportedProductVersions.length > 0 && (
                   <div style={{
                     display: 'flex',
                     gap: '6px',
@@ -222,9 +264,9 @@ export const Plugins: React.FC = () => {
                       fontWeight: 600,
                       alignSelf: 'center'
                     }}>
-                      Jira:
+                      {productName}:
                     </span>
-                    {plugin.supportedJiraVersions.map(version => (
+                    {plugin.supportedProductVersions.map(version => (
                       <span
                         key={version}
                         style={{

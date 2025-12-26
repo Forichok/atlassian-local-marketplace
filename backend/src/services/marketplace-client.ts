@@ -7,14 +7,18 @@ import {
   MarketplaceVersion,
 } from '../types';
 import { createLogger } from '../lib/logger';
+import { ProductType } from '@prisma/client';
 
 const logger = createLogger('MarketplaceClient');
 
 export class MarketplaceClient {
   private client: AxiosInstance;
+  private productType: ProductType;
 
-  constructor() {
+  constructor(productType: ProductType = 'JIRA') {
+    this.productType = productType;
     logger.info('Initializing MarketplaceClient', {
+      productType: this.productType,
       baseURL: config.marketplace.baseUrl,
       timeout: 30000,
       maxRetries: config.marketplace.maxRetries,
@@ -85,7 +89,9 @@ export class MarketplaceClient {
     limit: number = 100,
     offset: number = 0
   ): Promise<MarketplaceListResponse> {
-    logger.info('Fetching addons list', { limit, offset });
+    logger.info('Fetching addons list', { limit, offset, productType: this.productType });
+
+    const application = this.productType === 'JIRA' ? 'jira' : 'confluence';
 
     return retry(
       async () => {
@@ -93,7 +99,7 @@ export class MarketplaceClient {
           '/rest/2/addons',
           {
             params: {
-              application: 'jira',
+              application,
               hosting: 'datacenter',
               limit,
               offset,

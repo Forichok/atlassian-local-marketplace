@@ -83,6 +83,7 @@ export interface DownloadTask {
 export interface JobProgress {
   stage: string;
   status: string;
+  productType?: string;
   totalItems: number;
   processedItems: number;
   failedItems: number;
@@ -98,6 +99,7 @@ export interface JobProgress {
 export interface PluginWithMetadata {
   id: string;
   addonKey: string;
+  productType: string;
   appId?: string;
   name: string;
   vendor?: string;
@@ -106,7 +108,7 @@ export interface PluginWithMetadata {
   totalSize?: number;
   createdAt: string;
   updatedAt: string;
-  supportedJiraVersions?: number[];
+  supportedProductVersions?: number[];
   _count?: {
     versions: number;
     files: number;

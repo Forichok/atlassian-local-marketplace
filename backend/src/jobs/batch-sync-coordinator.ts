@@ -1,4 +1,4 @@
-import { SyncStage, LogLevel } from '@prisma/client';
+import { SyncStage, LogLevel, ProductType } from '@prisma/client';
 import { JobManager } from '../services/job-manager';
 import { MarketplaceClient } from '../services/marketplace-client';
 import { prisma } from '../lib/prisma';
@@ -9,19 +9,21 @@ import { Stage3DownloadAll } from './stage3-download-all';
 export class BatchSyncCoordinator {
   private jobManager: JobManager;
   private marketplaceClient: MarketplaceClient;
+  private productType: ProductType;
   private stage2: Stage2DownloadLatest;
   private stage3: Stage3DownloadAll;
   private currentBatch: number = 0;
 
-  constructor() {
+  constructor(productType: ProductType = 'JIRA') {
+    this.productType = productType;
     this.jobManager = new JobManager();
-    this.marketplaceClient = new MarketplaceClient();
-    this.stage2 = new Stage2DownloadLatest();
-    this.stage3 = new Stage3DownloadAll();
+    this.marketplaceClient = new MarketplaceClient(productType);
+    this.stage2 = new Stage2DownloadLatest(productType);
+    this.stage3 = new Stage3DownloadAll(productType);
   }
 
   async start(): Promise<void> {
-    const jobId = await this.jobManager.getOrCreateJob(SyncStage.METADATA_INGESTION);
+    const jobId = await this.jobManager.getOrCreateJob(SyncStage.METADATA_INGESTION, this.productType);
     const job = await this.jobManager.getJob(jobId);
 
     if (!job) {
@@ -40,7 +42,7 @@ export class BatchSyncCoordinator {
   }
 
   async continueNextBatch(): Promise<void> {
-    const jobId = await this.jobManager.getOrCreateJob(SyncStage.METADATA_INGESTION);
+    const jobId = await this.jobManager.getOrCreateJob(SyncStage.METADATA_INGESTION, this.productType);
     const job = await this.jobManager.getJob(jobId);
 
     if (!job) {
@@ -64,7 +66,7 @@ export class BatchSyncCoordinator {
       await this.jobManager.log(
         jobId,
         LogLevel.INFO,
-        `🚀 Starting Batch #${this.currentBatch + 1} - Metadata Sync`
+        `🚀 Starting Batch #${this.currentBatch + 1} - Metadata Sync for ${this.productType}`
       );
 
       // Stage 1: Fetch metadata for next chunk of plugins
@@ -143,8 +145,8 @@ export class BatchSyncCoordinator {
       await this.jobManager.log(
         jobId,
         LogLevel.INFO,
-        `📥 Batch #${this.currentBatch + 1}: Fetching ${limit} plugins from marketplace (starting at plugin #${offset + 1})`,
-        { offset, limit, batch: this.currentBatch }
+        `📥 Batch #${this.currentBatch + 1}: Fetching ${limit} ${this.productType} plugins from marketplace (starting at plugin #${offset + 1})`,
+        { offset, limit, batch: this.currentBatch, productType: this.productType }
       );
 
       const response = await this.marketplaceClient.fetchAddons(limit, offset);
@@ -230,9 +232,15 @@ export class BatchSyncCoordinator {
       : undefined;
 
     const plugin = await prisma.plugin.upsert({
-      where: { addonKey: addon.key },
+      where: {
+        addonKey_productType: {
+          addonKey: addon.key,
+          productType: this.productType
+        }
+      },
       create: {
         addonKey: addon.key,
+        productType: this.productType,
         appId: appId,
         name: addon.name,
         vendor: addon.vendor?.name,
@@ -292,15 +300,16 @@ export class BatchSyncCoordinator {
 
     const downloadUrl = version._embedded?.artifact?._links?.binary?.href;
 
-    // Extract Jira compatibility from compatibilities array
-    let jiraMin: string | undefined = undefined;
-    let jiraMax: string | undefined = undefined;
+    // Extract product compatibility from compatibilities array
+    const applicationName = this.productType.toLowerCase(); // 'jira' or 'confluence'
+    let productVersionMin: string | undefined = undefined;
+    let productVersionMax: string | undefined = undefined;
 
     if (version.compatibilities && Array.isArray(version.compatibilities)) {
       for (const compat of version.compatibilities) {
-        if (compat.application === 'jira' && compat.hosting?.dataCenter) {
-          jiraMin = compat.hosting.dataCenter.min?.version;
-          jiraMax = compat.hosting.dataCenter.max?.version;
+        if (compat.application === applicationName && compat.hosting?.dataCenter) {
+          productVersionMin = compat.hosting.dataCenter.min?.version;
+          productVersionMax = compat.hosting.dataCenter.max?.version;
           break;
         }
       }
@@ -328,8 +337,8 @@ export class BatchSyncCoordinator {
         pluginId,
         version: version.name,
         releaseDate: version.release?.date ? new Date(version.release.date) : undefined,
-        jiraMin,
-        jiraMax,
+        productVersionMin,
+        productVersionMax,
         dataCenterCompatible: true,
         downloadUrl: downloadUrl,
         changelogUrl,
@@ -339,8 +348,8 @@ export class BatchSyncCoordinator {
       },
       update: {
         releaseDate: version.release?.date ? new Date(version.release.date) : undefined,
-        jiraMin,
-        jiraMax,
+        productVersionMin,
+        productVersionMax,
         downloadUrl: downloadUrl,
         changelogUrl,
         changelog,

@@ -1,5 +1,5 @@
 import { prisma } from '../lib/prisma';
-import { SyncStage, JobStatus, LogLevel } from '@prisma/client';
+import { SyncStage, JobStatus, LogLevel, ProductType } from '@prisma/client';
 import { JobProgress } from '../types';
 import { createLogger } from '../lib/logger';
 
@@ -28,30 +28,33 @@ const safeStringify = (obj: any): string => {
 };
 
 export class JobManager {
-  async getOrCreateJob(stage: SyncStage): Promise<string> {
-    logger.debug('Getting or creating job', { stage });
+  async getOrCreateJob(stage: SyncStage, productType: ProductType = 'JIRA'): Promise<string> {
+    logger.debug('Getting or creating job', { stage, productType });
 
     let job = await prisma.syncJob.findFirst({
-      where: { stage },
+      where: { stage, productType },
       orderBy: { createdAt: 'desc' },
     });
 
     if (!job) {
-      logger.info('Creating new job', { stage });
+      logger.info('Creating new job', { stage, productType });
       job = await prisma.syncJob.create({
         data: {
           stage,
+          productType,
           status: JobStatus.IDLE,
         },
       });
       logger.info('Job created successfully', {
         stage,
+        productType,
         jobId: job.id,
         status: job.status,
       });
     } else {
       logger.debug('Found existing job', {
         stage,
+        productType,
         jobId: job.id,
         status: job.status,
         createdAt: job.createdAt,
@@ -61,12 +64,13 @@ export class JobManager {
     return job.id;
   }
 
-  async createFreshJob(stage: SyncStage): Promise<string> {
-    logger.info('Creating fresh job', { stage });
+  async createFreshJob(stage: SyncStage, productType: ProductType = 'JIRA'): Promise<string> {
+    logger.info('Creating fresh job', { stage, productType });
 
     const job = await prisma.syncJob.create({
       data: {
         stage,
+        productType,
         status: JobStatus.IDLE,
         totalItems: 0,
         processedItems: 0,
@@ -79,6 +83,7 @@ export class JobManager {
 
     logger.info('Fresh job created successfully', {
       stage,
+      productType,
       jobId: job.id,
       status: job.status,
     });
@@ -102,9 +107,9 @@ export class JobManager {
     });
   }
 
-  async getJobByStage(stage: SyncStage) {
+  async getJobByStage(stage: SyncStage, productType: ProductType = 'JIRA') {
     return prisma.syncJob.findFirst({
-      where: { stage },
+      where: { stage, productType },
       orderBy: { createdAt: 'desc' },
       include: {
         progress: {
@@ -380,14 +385,16 @@ export class JobManager {
     return job?.status !== JobStatus.RUNNING;
   }
 
-  async getAllJobs(): Promise<JobProgress[]> {
+  async getAllJobs(productType?: ProductType): Promise<JobProgress[]> {
     const jobs = await prisma.syncJob.findMany({
+      where: productType ? { productType } : undefined,
       orderBy: { createdAt: 'desc' },
     });
 
     return jobs.map((job) => ({
       stage: job.stage,
       status: job.status,
+      productType: job.productType,
       totalItems: job.totalItems,
       processedItems: job.processedItems,
       failedItems: job.failedItems,

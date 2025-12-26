@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
-import { pluginsApi } from '../api/client';
+import { useParams, useNavigate, useSearchParams } from 'react-router-dom';
+import { pluginsApi, ProductType } from '../api/client';
 import { Plugin, PluginVersion } from '../types';
 import { VersionModal } from '../components/VersionModal';
 import { useToast } from '../components/Toast';
@@ -10,14 +10,18 @@ import { NeonButton } from '../components/NeonButton';
 
 export const PluginDetail: React.FC = () => {
   const { addonKey } = useParams<{ addonKey: string }>();
+  const [searchParams] = useSearchParams();
   const navigate = useNavigate();
   const { showToast } = useToast();
   const [plugin, setPlugin] = useState<Plugin | null>(null);
-  const [jiraVersion, setJiraVersion] = useState<number | undefined>(undefined);
+  const [productVersion, setProductVersion] = useState<number | undefined>(undefined);
   const [loading, setLoading] = useState(true);
   const [resyncing, setResyncing] = useState(false);
   const [selectedVersion, setSelectedVersion] = useState<PluginVersion | null>(null);
   const [visibleVersionsCount, setVisibleVersionsCount] = useState(5);
+
+  const productType = (searchParams.get('productType') === 'CONFLUENCE' ? 'CONFLUENCE' : 'JIRA') as ProductType;
+  const productName = productType === 'CONFLUENCE' ? 'Confluence' : 'Jira';
 
   useEffect(() => {
     const fetchPlugin = async () => {
@@ -25,7 +29,7 @@ export const PluginDetail: React.FC = () => {
 
       try {
         setLoading(true);
-        const response = await pluginsApi.getPlugin(addonKey);
+        const response = await pluginsApi.getPlugin(addonKey, productType);
         setPlugin(response.data);
       } catch (error) {
         console.error('Error fetching plugin:', error);
@@ -35,13 +39,13 @@ export const PluginDetail: React.FC = () => {
     };
 
     fetchPlugin();
-  }, [addonKey]);
+  }, [addonKey, productType]);
 
   const handleDownload = async (version: string) => {
     if (!addonKey) return;
 
     try {
-      const response = await pluginsApi.downloadVersion(addonKey, version);
+      const response = await pluginsApi.downloadVersion(addonKey, version, productType);
       const url = window.URL.createObjectURL(new Blob([response.data]));
       const link = document.createElement('a');
       link.href = url;
@@ -61,7 +65,7 @@ export const PluginDetail: React.FC = () => {
 
     try {
       setResyncing(true);
-      await pluginsApi.resyncPlugin(addonKey);
+      await pluginsApi.resyncPlugin(addonKey, productType);
       showToast('Plugin resync initiated successfully', 'success');
     } catch (error) {
       console.error('Error resyncing plugin:', error);
@@ -75,9 +79,8 @@ export const PluginDetail: React.FC = () => {
     if (!addonKey) return;
 
     try {
-      await pluginsApi.forceDownloadVersion(addonKey, version);
+      await pluginsApi.forceDownloadVersion(addonKey, version, productType);
       showToast(`Download initiated for version ${version}. Page will refresh soon...`, 'success');
-      // Refresh plugin data after a short delay
       setTimeout(() => {
         window.location.reload();
       }, 2000);
@@ -89,13 +92,13 @@ export const PluginDetail: React.FC = () => {
 
   const filteredVersions = plugin?.versions?.filter((v) => {
     if (!v.dataCenterCompatible) return false;
-    if (jiraVersion === undefined) return true; // Show all versions when no filter is selected
-    if (!v.jiraMin && !v.jiraMax) return true;
+    if (productVersion === undefined) return true;
+    if (!v.productVersionMin && !v.productVersionMax) return true;
 
-    const min = v.jiraMin ? parseInt(v.jiraMin.split('.')[0]) : 0;
-    const max = v.jiraMax ? parseInt(v.jiraMax.split('.')[0]) : 999;
+    const min = v.productVersionMin ? parseInt(v.productVersionMin.split('.')[0]) : 0;
+    const max = v.productVersionMax ? parseInt(v.productVersionMax.split('.')[0]) : 999;
 
-    return min <= jiraVersion && max >= jiraVersion;
+    return min <= productVersion && max >= productVersion;
   });
 
   const visibleVersions = filteredVersions?.slice(0, visibleVersionsCount);
@@ -105,33 +108,31 @@ export const PluginDetail: React.FC = () => {
     setVisibleVersionsCount(prev => prev + 10);
   };
 
-  // Calculate supported Jira versions from all plugin versions
-  const supportedJiraVersions = React.useMemo(() => {
+  const supportedProductVersions = React.useMemo(() => {
     if (!plugin?.versions) return [];
 
     const supportedVersions = new Set<number>();
-    const jiraVersionsToCheck = [8, 9, 10, 11];
+    const versionsToCheck = productType === 'CONFLUENCE' ? [7, 8, 9] : [8, 9, 10, 11];
 
     for (const version of plugin.versions) {
       if (!version.dataCenterCompatible) continue;
 
-      if (!version.jiraMin && !version.jiraMax) {
-        // If no min/max specified, assume it supports all versions
-        jiraVersionsToCheck.forEach(v => supportedVersions.add(v));
+      if (!version.productVersionMin && !version.productVersionMax) {
+        versionsToCheck.forEach(v => supportedVersions.add(v));
       } else {
-        const min = version.jiraMin ? parseInt(version.jiraMin.split('.')[0]) : 0;
-        const max = version.jiraMax ? parseInt(version.jiraMax.split('.')[0]) : 999;
+        const min = version.productVersionMin ? parseInt(version.productVersionMin.split('.')[0]) : 0;
+        const max = version.productVersionMax ? parseInt(version.productVersionMax.split('.')[0]) : 999;
 
-        for (const jiraVer of jiraVersionsToCheck) {
-          if (min <= jiraVer && max >= jiraVer) {
-            supportedVersions.add(jiraVer);
+        for (const ver of versionsToCheck) {
+          if (min <= ver && max >= ver) {
+            supportedVersions.add(ver);
           }
         }
       }
     }
 
     return Array.from(supportedVersions).sort();
-  }, [plugin?.versions]);
+  }, [plugin?.versions, productType]);
 
   if (loading) {
     return (
@@ -225,8 +226,7 @@ export const PluginDetail: React.FC = () => {
           </p>
         )}
 
-        {/* Supported Jira Versions */}
-        {supportedJiraVersions.length > 0 && (
+        {supportedProductVersions.length > 0 && (
           <div style={{
             display: 'flex',
             gap: '8px',
@@ -241,30 +241,30 @@ export const PluginDetail: React.FC = () => {
               fontWeight: 600,
               color: 'var(--color-text-secondary)'
             }}>
-              Supported Jira Versions:
+              Supported {productName} Versions:
             </span>
-            {supportedJiraVersions.map(version => (
+            {supportedProductVersions.map((version: number) => (
               <span
                 key={version}
                 style={{
-                  background: version === jiraVersion
+                  background: version === productVersion
                     ? 'linear-gradient(135deg, #0052cc, #0065ff)'
                     : 'rgba(0, 82, 204, 0.12)',
-                  color: version === jiraVersion ? 'white' : '#0052cc',
+                  color: version === productVersion ? 'white' : '#0052cc',
                   padding: '6px 12px',
                   borderRadius: '6px',
                   fontSize: '13px',
                   fontWeight: 700,
-                  border: version === jiraVersion
+                  border: version === productVersion
                     ? '1px solid rgba(0, 82, 204, 0.3)'
                     : '1px solid rgba(0, 82, 204, 0.2)',
-                  boxShadow: version === jiraVersion
+                  boxShadow: version === productVersion
                     ? '0 2px 8px rgba(0, 82, 204, 0.3)'
                     : 'none',
                   transition: 'all 0.2s'
                 }}
               >
-                Jira {version}
+                {productName} {version}
               </span>
             ))}
           </div>
@@ -338,13 +338,13 @@ export const PluginDetail: React.FC = () => {
             alignItems: 'center',
             gap: '8px'
           }}>
-            <label style={{ marginRight: '8px', fontSize: '14px', fontWeight: 600 }}>Filter by Jira:</label>
+            <label style={{ marginRight: '8px', fontSize: '14px', fontWeight: 600 }}>Filter by {productName}:</label>
             <select
               className="select"
-              value={jiraVersion ?? ''}
+              value={productVersion ?? ''}
               onChange={(e) => {
                 const value = e.target.value ? parseInt(e.target.value, 10) : undefined;
-                setJiraVersion(value);
+                setProductVersion(value);
               }}
               style={{
                 background: 'rgba(255, 255, 255, 0.8)',
@@ -354,16 +354,26 @@ export const PluginDetail: React.FC = () => {
               }}
             >
               <option value="">All versions</option>
-              <option value={8}>Jira 8</option>
-              <option value={9}>Jira 9</option>
-              <option value={10}>Jira 10</option>
-              <option value={11}>Jira 11</option>
+              {productType === 'CONFLUENCE' ? (
+                <>
+                  <option value={7}>Confluence 7</option>
+                  <option value={8}>Confluence 8</option>
+                  <option value={9}>Confluence 9</option>
+                </>
+              ) : (
+                <>
+                  <option value={8}>Jira 8</option>
+                  <option value={9}>Jira 9</option>
+                  <option value={10}>Jira 10</option>
+                  <option value={11}>Jira 11</option>
+                </>
+              )}
             </select>
           </div>
         </div>
 
         {!filteredVersions || filteredVersions.length === 0 ? (
-          <p>No compatible versions found{jiraVersion ? ` for Jira ${jiraVersion}` : ''}</p>
+          <p>No compatible versions found{productVersion ? ` for ${productName} ${productVersion}` : ''}</p>
         ) : (
           <>
             <table className="table">
@@ -372,7 +382,7 @@ export const PluginDetail: React.FC = () => {
                   <th>Version</th>
                   <th>Release Date</th>
                   <th>Size</th>
-                  <th>Jira Compatibility</th>
+                  <th>{productName} Compatibility</th>
                   <th>Status</th>
                   <th>Actions</th>
                 </tr>
@@ -421,8 +431,8 @@ export const PluginDetail: React.FC = () => {
                         ) : '-'}
                       </td>
                       <td>
-                        {version.jiraMin || version.jiraMax
-                          ? `${version.jiraMin || '?'} - ${version.jiraMax || '?'}`
+                        {version.productVersionMin || version.productVersionMax
+                          ? `${version.productVersionMin || '?'} - ${version.productVersionMax || '?'}`
                           : 'All versions'}
                       </td>
                       <td>

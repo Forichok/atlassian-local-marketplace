@@ -87,10 +87,10 @@ export const VersionModal: React.FC<VersionModalProps> = ({ version, onClose, on
   };
 
   const getCompatibilityPercentage = () => {
-    if (!version.jiraMin && !version.jiraMax) return 100;
-    const min = version.jiraMin ? parseInt(version.jiraMin.split('.')[0]) : 8;
-    const max = version.jiraMax ? parseInt(version.jiraMax.split('.')[0]) : 11;
-    const range = 11 - 8; // Jira 8 to 11
+    if (!version.productVersionMin && !version.productVersionMax) return 100;
+    const min = version.productVersionMin ? parseInt(version.productVersionMin.split('.')[0]) : 8;
+    const max = version.productVersionMax ? parseInt(version.productVersionMax.split('.')[0]) : 11;
+    const range = 11 - 8; // Product versions 8 to 11
     const covered = max - min + 1;
     return Math.min(100, (covered / range) * 100);
   };
@@ -745,19 +745,19 @@ export const VersionModal: React.FC<VersionModalProps> = ({ version, onClose, on
                 )}
               </div>
 
-              {(version.jiraMin || version.jiraMax) && (
+              {(version.productVersionMin || version.productVersionMax) && (
                 <div className="version-info-card" style={{ marginBottom: '24px', gridColumn: '1 / -1' }}>
                   <button
                     className="copy-button"
-                    onClick={() => copyToClipboard(`${version.jiraMin || '?'} - ${version.jiraMax || '?'}`)}
+                    onClick={() => copyToClipboard(`${version.productVersionMin || '?'} - ${version.productVersionMax || '?'}`)}
                   >
                     {copied ? '✓ Copied' : '📋 Copy'}
                   </button>
                   <div className="version-info-label">
-                    🔧 Jira Compatibility
+                    🔧 Product Compatibility
                   </div>
                   <div className="version-info-value" style={{ marginBottom: '4px' }}>
-                    {version.jiraMin || '8.0.0'} - {version.jiraMax || '9.17.5'}
+                    {version.productVersionMin || '8.0.0'} - {version.productVersionMax || '9.17.5'}
                   </div>
                   <div className="compatibility-bar">
                     <div

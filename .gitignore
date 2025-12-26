@@ -39,3 +39,4 @@ logs/
 *.sqlite
 postgres-data/
 
+claude.md

@@ -8,6 +8,7 @@ export interface Plugin {
   marketplaceUrl?: string;
   totalSize?: number;
   supportedJiraVersions?: number[];
+  supportedProductVersions?: number[];
   createdAt: string;
   updatedAt: string;
   versions?: PluginVersion[];
@@ -22,8 +23,8 @@ export interface PluginVersion {
   pluginId: string;
   version: string;
   releaseDate?: string;
-  jiraMin?: string;
-  jiraMax?: string;
+  productVersionMin?: string;
+  productVersionMax?: string;
   dataCenterCompatible: boolean;
   releaseNotes?: string;
   changelogUrl?: string;

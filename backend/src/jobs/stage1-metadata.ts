@@ -1,4 +1,4 @@
-import { SyncStage, LogLevel } from '@prisma/client';
+import { SyncStage, LogLevel, ProductType } from '@prisma/client';
 import { JobManager } from '../services/job-manager';
 import { MarketplaceClient } from '../services/marketplace-client';
 import { prisma } from '../lib/prisma';
@@ -10,12 +10,14 @@ const logger = createLogger('Stage1MetadataIngestion');
 export class Stage1MetadataIngestion {
   private jobManager: JobManager;
   private marketplaceClient: MarketplaceClient;
+  private productType: ProductType;
   private autoStartTimer: NodeJS.Timeout | null = null;
 
-  constructor() {
-    logger.info('Initializing Stage1MetadataIngestion');
+  constructor(productType: ProductType = 'JIRA') {
+    this.productType = productType;
+    logger.info('Initializing Stage1MetadataIngestion', { productType });
     this.jobManager = new JobManager();
-    this.marketplaceClient = new MarketplaceClient();
+    this.marketplaceClient = new MarketplaceClient(productType);
   }
 
   cancelAutoStart(): void {
@@ -44,7 +46,7 @@ export class Stage1MetadataIngestion {
       });
 
       // Create a temporary job for logging
-      const jobId = await this.jobManager.getOrCreateJob(SyncStage.METADATA_INGESTION);
+      const jobId = await this.jobManager.getOrCreateJob(SyncStage.METADATA_INGESTION, this.productType);
 
       // Process the addon (this will update metadata and versions)
       await this.processAddon(jobId, addon);
@@ -62,9 +64,9 @@ export class Stage1MetadataIngestion {
   }
 
   async start(): Promise<void> {
-    logger.info('Starting Stage 1: Metadata Ingestion');
+    logger.info('Starting Stage 1: Metadata Ingestion', { productType: this.productType });
 
-    const jobId = await this.jobManager.getOrCreateJob(SyncStage.METADATA_INGESTION);
+    const jobId = await this.jobManager.getOrCreateJob(SyncStage.METADATA_INGESTION, this.productType);
     const job = await this.jobManager.getJob(jobId);
 
     if (!job) {
@@ -89,9 +91,9 @@ export class Stage1MetadataIngestion {
   }
 
   async pause(): Promise<void> {
-    logger.info('Pausing Stage 1: Metadata Ingestion');
+    logger.info('Pausing Stage 1: Metadata Ingestion', { productType: this.productType });
 
-    const job = await this.jobManager.getJobByStage(SyncStage.METADATA_INGESTION);
+    const job = await this.jobManager.getJobByStage(SyncStage.METADATA_INGESTION, this.productType);
     if (job) {
       logger.info('Pausing job', { jobId: job.id, status: job.status });
       await this.jobManager.pauseJob(job.id);
@@ -101,9 +103,9 @@ export class Stage1MetadataIngestion {
   }
 
   async resume(): Promise<void> {
-    logger.info('Resuming Stage 1: Metadata Ingestion');
+    logger.info('Resuming Stage 1: Metadata Ingestion', { productType: this.productType });
 
-    const job = await this.jobManager.getJobByStage(SyncStage.METADATA_INGESTION);
+    const job = await this.jobManager.getJobByStage(SyncStage.METADATA_INGESTION, this.productType);
     if (!job) {
       logger.error('No job found to resume');
       throw new Error('No job found to resume');
@@ -128,9 +130,9 @@ export class Stage1MetadataIngestion {
   }
 
   async restart(): Promise<void> {
-    logger.info('Restarting Stage 1: Metadata Ingestion');
+    logger.info('Restarting Stage 1: Metadata Ingestion', { productType: this.productType });
 
-    const job = await this.jobManager.getJobByStage(SyncStage.METADATA_INGESTION);
+    const job = await this.jobManager.getJobByStage(SyncStage.METADATA_INGESTION, this.productType);
 
     if (job && job.status === 'RUNNING') {
       logger.warn('Cannot restart: job is currently running');
@@ -138,7 +140,7 @@ export class Stage1MetadataIngestion {
     }
 
     // Create a new job (this will clear errors and reset progress)
-    const newJobId = await this.jobManager.createFreshJob(SyncStage.METADATA_INGESTION);
+    const newJobId = await this.jobManager.createFreshJob(SyncStage.METADATA_INGESTION, this.productType);
 
     logger.info('Created fresh job for restart', { jobId: newJobId });
 
@@ -159,7 +161,7 @@ export class Stage1MetadataIngestion {
 
     // Check if plugin exists and was updated after job started
     const plugin = await prisma.plugin.findUnique({
-      where: { addonKey },
+      where: { addonKey_productType: { addonKey, productType: this.productType } },
       select: { updatedAt: true },
     });
 
@@ -390,7 +392,7 @@ export class Stage1MetadataIngestion {
 
           // Import Stage2 dynamically to avoid circular dependencies
           const { Stage2DownloadLatest } = await import('./stage2-download-latest');
-          const stage2 = new Stage2DownloadLatest();
+          const stage2 = new Stage2DownloadLatest(this.productType);
           await stage2.start();
         } catch (error) {
           const errorMessage = error instanceof Error ? error.message : String(error);
@@ -432,9 +434,15 @@ export class Stage1MetadataIngestion {
         : undefined;
 
       const plugin = await prisma.plugin.upsert({
-        where: { addonKey: addon.key },
+        where: {
+          addonKey_productType: {
+            addonKey: addon.key,
+            productType: this.productType
+          }
+        },
         create: {
           addonKey: addon.key,
+          productType: this.productType,
           appId: appId,
           name: addon.name,
           vendor: addon.vendor?.name,
@@ -542,19 +550,20 @@ export class Stage1MetadataIngestion {
       ? `https://marketplace.atlassian.com${alternateLink}`
       : undefined;
 
-    // Extract Jira compatibility from compatibilities array
-    let jiraMin: string | undefined = undefined;
-    let jiraMax: string | undefined = undefined;
+    // Extract product compatibility from compatibilities array
+    const applicationName = this.productType.toLowerCase(); // 'jira' or 'confluence'
+    let productVersionMin: string | undefined = undefined;
+    let productVersionMax: string | undefined = undefined;
 
     if (version.compatibilities && Array.isArray(version.compatibilities)) {
       for (const compat of version.compatibilities) {
-        if (compat.application === 'jira' && compat.hosting?.dataCenter) {
-          jiraMin = compat.hosting.dataCenter.min?.version;
-          jiraMax = compat.hosting.dataCenter.max?.version;
-          logger.debug('Found Jira compatibility for version', {
+        if (compat.application === applicationName && compat.hosting?.dataCenter) {
+          productVersionMin = compat.hosting.dataCenter.min?.version;
+          productVersionMax = compat.hosting.dataCenter.max?.version;
+          logger.debug(`Found ${this.productType} compatibility for version`, {
             version: version.name,
-            jiraMin,
-            jiraMax,
+            productVersionMin,
+            productVersionMax,
           });
           break;
         }
@@ -576,8 +585,8 @@ export class Stage1MetadataIngestion {
         pluginId,
         version: version.name,
         releaseDate: version.release?.date ? new Date(version.release.date) : undefined,
-        jiraMin,
-        jiraMax,
+        productVersionMin,
+        productVersionMax,
         dataCenterCompatible: true,
         releaseNotes,
         changelog,
@@ -588,8 +597,8 @@ export class Stage1MetadataIngestion {
       },
       update: {
         releaseDate: version.release?.date ? new Date(version.release.date) : undefined,
-        jiraMin,
-        jiraMax,
+        productVersionMin,
+        productVersionMax,
         releaseNotes,
         changelog,
         changelogUrl,

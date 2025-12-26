@@ -1,4 +1,4 @@
-import { SyncStage, LogLevel, PluginDownloadStatus } from '@prisma/client';
+import { SyncStage, LogLevel, PluginDownloadStatus, ProductType } from '@prisma/client';
 import { JobManager } from '../services/job-manager';
 import { MarketplaceClient } from '../services/marketplace-client';
 import { prisma } from '../lib/prisma';
@@ -11,16 +11,18 @@ import PQueue from 'p-queue';
 export class Stage2DownloadLatest {
   private jobManager: JobManager;
   private marketplaceClient: MarketplaceClient;
+  private productType: ProductType;
   private queue: PQueue;
 
-  constructor() {
+  constructor(productType: ProductType = 'JIRA') {
+    this.productType = productType;
     this.jobManager = new JobManager();
-    this.marketplaceClient = new MarketplaceClient();
+    this.marketplaceClient = new MarketplaceClient(productType);
     this.queue = new PQueue({ concurrency: config.job.concurrentDownloads });
   }
 
   async start(): Promise<void> {
-    const jobId = await this.jobManager.getOrCreateJob(SyncStage.DOWNLOAD_LATEST);
+    const jobId = await this.jobManager.getOrCreateJob(SyncStage.DOWNLOAD_LATEST, this.productType);
     const job = await this.jobManager.getJob(jobId);
 
     if (!job) {
@@ -36,7 +38,7 @@ export class Stage2DownloadLatest {
   }
 
   async pause(): Promise<void> {
-    const job = await this.jobManager.getJobByStage(SyncStage.DOWNLOAD_LATEST);
+    const job = await this.jobManager.getJobByStage(SyncStage.DOWNLOAD_LATEST, this.productType);
     if (job) {
       await this.jobManager.pauseJob(job.id);
       this.queue.pause();
@@ -44,7 +46,7 @@ export class Stage2DownloadLatest {
   }
 
   async resume(): Promise<void> {
-    const job = await this.jobManager.getJobByStage(SyncStage.DOWNLOAD_LATEST);
+    const job = await this.jobManager.getJobByStage(SyncStage.DOWNLOAD_LATEST, this.productType);
     if (!job) {
       throw new Error('No job found to resume');
     }
@@ -59,36 +61,39 @@ export class Stage2DownloadLatest {
   }
 
   async restart(): Promise<void> {
-    const job = await this.jobManager.getJobByStage(SyncStage.DOWNLOAD_LATEST);
+    const job = await this.jobManager.getJobByStage(SyncStage.DOWNLOAD_LATEST, this.productType);
 
     if (job && job.status === 'RUNNING') {
       throw new Error('Cannot restart while job is running. Please pause it first.');
     }
 
     // Create a new job (this will clear errors and reset progress)
-    const newJobId = await this.jobManager.createFreshJob(SyncStage.DOWNLOAD_LATEST);
+    const newJobId = await this.jobManager.createFreshJob(SyncStage.DOWNLOAD_LATEST, this.productType);
 
     await this.jobManager.startJob(newJobId);
     await this.run(newJobId);
   }
 
   async processBatch(batchNumber: number): Promise<void> {
-    const jobId = await this.jobManager.getOrCreateJob(SyncStage.DOWNLOAD_LATEST);
+    const jobId = await this.jobManager.getOrCreateJob(SyncStage.DOWNLOAD_LATEST, this.productType);
     await this.jobManager.log(
       jobId,
       LogLevel.INFO,
-      `Processing batch ${batchNumber} in Stage 2`
+      `Processing batch ${batchNumber} in Stage 2 for ${this.productType}`
     );
     await this.runBatch(jobId, batchNumber);
   }
 
   private async runBatch(jobId: string, batchNumber: number): Promise<void> {
     try {
-      // Target major Jira versions: 8, 9, 10, 11
-      const targetJiraMajorVersions = [8, 9, 10, 11];
+      // Target major versions based on product type
+      const targetJiraMajorVersions = this.productType === 'JIRA' ? [8, 9, 10, 11] : [7, 8, 9, 10];
 
       const plugins = await prisma.plugin.findMany({
-        where: { batchNumber } as any,
+        where: {
+          batchNumber,
+          productType: this.productType,
+        },
         include: {
           versions: {
             where: {
@@ -156,16 +161,19 @@ export class Stage2DownloadLatest {
 
   private async run(jobId: string): Promise<void> {
     try {
-      // Target major Jira versions: 8, 9, 10, 11
-      const targetJiraMajorVersions = [8, 9, 10, 11];
+      // Target major versions based on product type
+      const targetJiraMajorVersions = this.productType === 'JIRA' ? [8, 9, 10, 11] : [7, 8, 9, 10];
 
       await this.jobManager.log(
         jobId,
         LogLevel.INFO,
-        `Starting download of latest versions for Jira ${targetJiraMajorVersions.join('.x, ')}.x`
+        `Starting download of latest versions for ${this.productType} ${targetJiraMajorVersions.join('.x, ')}.x`
       );
 
       const plugins = await prisma.plugin.findMany({
+        where: {
+          productType: this.productType,
+        },
         include: {
           versions: {
             where: {
@@ -252,14 +260,14 @@ export class Stage2DownloadLatest {
       return null;
     }
 
-    // Try to find versions with explicit Jira compatibility data
+    // Try to find versions with explicit product compatibility data
     const compatibleVersions = versions.filter((v) => {
-      if (v.jiraMin || v.jiraMax) {
-        const minVer = v.jiraMin ? this.parseVersion(v.jiraMin) : { major: 0, minor: 0 };
-        const maxVer = v.jiraMax ? this.parseVersion(v.jiraMax) : { major: 999, minor: 999 };
+      if (v.productVersionMin || v.productVersionMax) {
+        const minVer = v.productVersionMin ? this.parseVersion(v.productVersionMin) : { major: 0, minor: 0 };
+        const maxVer = v.productVersionMax ? this.parseVersion(v.productVersionMax) : { major: 999, minor: 999 };
 
         // Check if the target major version falls within the compatibility range
-        // A version is compatible with Jira X.x if:
+        // A version is compatible with product X.x if:
         // - minVer.major <= X <= maxVer.major
         const isCompatible = minVer.major <= targetJiraMajor && targetJiraMajor <= maxVer.major;
 

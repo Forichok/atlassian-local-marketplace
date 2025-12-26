@@ -1,11 +1,13 @@
 import React, { useEffect, useState } from 'react';
-import { syncApi, pluginsApi } from '../api/client';
+import { syncApi, pluginsApi, ProductType } from '../api/client';
 import { SyncStatus, PluginStats } from '../types';
 import { Loading } from '../components/Loading';
 import { AnimatedNumber } from '../components/AnimatedNumber';
 import { useToast } from '../components/Toast';
+import { ProductSelector } from '../components/ProductSelector';
 
 export const Admin: React.FC = () => {
+  const [selectedProduct, setSelectedProduct] = useState<ProductType>('JIRA');
   const [syncStatus, setSyncStatus] = useState<SyncStatus | null>(null);
   const [stats, setStats] = useState<PluginStats | null>(null);
   const [loading, setLoading] = useState(true);
@@ -14,8 +16,8 @@ export const Admin: React.FC = () => {
   const fetchStatus = async () => {
     try {
       const [statusRes, statsRes] = await Promise.all([
-        syncApi.getStatus(),
-        pluginsApi.getStats(),
+        syncApi.getStatus(selectedProduct),
+        pluginsApi.getStats(selectedProduct),
       ]);
       setSyncStatus(statusRes.data);
       setStats(statsRes.data);
@@ -31,7 +33,7 @@ export const Admin: React.FC = () => {
     fetchStatus();
     const interval = setInterval(fetchStatus, 3000);
     return () => clearInterval(interval);
-  }, []);
+  }, [selectedProduct]);
 
   const handleAction = async (action: () => Promise<any>, actionName: string) => {
     try {
@@ -52,36 +54,51 @@ export const Admin: React.FC = () => {
     );
   }
 
+  const productIcon = selectedProduct === 'JIRA' ? '🔷' : '📘';
+
   return (
     <div className="container">
       <div style={{
         marginBottom: 'var(--space-2xl)'
       }}>
-        <h1 style={{
-          fontSize: '42px',
-          fontWeight: 800,
-          background: 'var(--gradient-jira)',
-          WebkitBackgroundClip: 'text',
-          WebkitTextFillColor: 'transparent',
-          backgroundClip: 'text',
-          marginBottom: '8px',
-          letterSpacing: '-1px'
+        <div style={{
+          display: 'flex',
+          alignItems: 'flex-start',
+          justifyContent: 'space-between',
+          marginBottom: 'var(--space-lg)'
         }}>
-          Sync Administration
-        </h1>
-        <p style={{
-          fontSize: '16px',
-          color: 'var(--color-text-secondary)',
-          fontWeight: 500
-        }}>
-          Monitor and control plugin synchronization processes
-        </p>
+          <div>
+            <h1 style={{
+              fontSize: '42px',
+              fontWeight: 800,
+              background: 'var(--gradient-jira)',
+              WebkitBackgroundClip: 'text',
+              WebkitTextFillColor: 'transparent',
+              backgroundClip: 'text',
+              marginBottom: '8px',
+              letterSpacing: '-1px'
+            }}>
+              Sync Administration
+            </h1>
+            <p style={{
+              fontSize: '16px',
+              color: 'var(--color-text-secondary)',
+              fontWeight: 500
+            }}>
+              Monitor and control plugin synchronization processes
+            </p>
+          </div>
+          <ProductSelector
+            selected={selectedProduct}
+            onChange={setSelectedProduct}
+          />
+        </div>
       </div>
 
       {stats && (
         <div className="stats-grid">
           <div className="stat-card">
-            <h3>🔌 Total Plugins</h3>
+            <h3>{productIcon} Total Plugins</h3>
             <div className="value">
               <AnimatedNumber
                 value={stats.totalPlugins}
@@ -206,25 +223,25 @@ export const Admin: React.FC = () => {
 
         <div style={{ marginTop: 'var(--space-lg)', display: 'flex', gap: 'var(--space-sm)' }}>
           {syncStatus?.metadata?.status === 'RUNNING' ? (
-            <button className="button secondary" onClick={() => handleAction(syncApi.pauseMetadata, 'Pause metadata sync')}>
+            <button className="button secondary" onClick={() => handleAction(() => syncApi.pauseMetadata(selectedProduct), 'Pause metadata sync')}>
               ⏸ Pause
             </button>
           ) : syncStatus?.metadata?.status === 'PAUSED' ? (
             <>
-              <button className="button" onClick={() => handleAction(syncApi.resumeMetadata, 'Resume metadata sync')}>
+              <button className="button" onClick={() => handleAction(() => syncApi.resumeMetadata(selectedProduct), 'Resume metadata sync')}>
                 ▶️ Resume
               </button>
-              <button className="button secondary" onClick={() => handleAction(syncApi.restartMetadata, 'Restart metadata sync')}>
+              <button className="button secondary" onClick={() => handleAction(() => syncApi.restartMetadata(selectedProduct), 'Restart metadata sync')}>
                 🔄 Restart
               </button>
             </>
           ) : (
             <>
-              <button className="button" onClick={() => handleAction(syncApi.startMetadata, 'Start metadata sync')}>
+              <button className="button" onClick={() => handleAction(() => syncApi.startMetadata(selectedProduct), 'Start metadata sync')}>
                 ▶️ Start
               </button>
               {syncStatus?.metadata && (
-                <button className="button secondary" onClick={() => handleAction(syncApi.restartMetadata, 'Restart metadata sync')}>
+                <button className="button secondary" onClick={() => handleAction(() => syncApi.restartMetadata(selectedProduct), 'Restart metadata sync')}>
                   🔄 Restart
                 </button>
               )}
@@ -328,25 +345,25 @@ export const Admin: React.FC = () => {
 
         <div style={{ marginTop: 'var(--space-lg)', display: 'flex', gap: 'var(--space-sm)' }}>
           {syncStatus?.downloadLatest?.status === 'RUNNING' ? (
-            <button className="button secondary" onClick={() => handleAction(syncApi.pauseDownloadLatest, 'Pause latest downloads')}>
+            <button className="button secondary" onClick={() => handleAction(() => syncApi.pauseDownloadLatest(selectedProduct), 'Pause latest downloads')}>
               ⏸ Pause
             </button>
           ) : syncStatus?.downloadLatest?.status === 'PAUSED' ? (
             <>
-              <button className="button" onClick={() => handleAction(syncApi.resumeDownloadLatest, 'Resume latest downloads')}>
+              <button className="button" onClick={() => handleAction(() => syncApi.resumeDownloadLatest(selectedProduct), 'Resume latest downloads')}>
                 ▶️ Resume
               </button>
-              <button className="button secondary" onClick={() => handleAction(syncApi.restartDownloadLatest, 'Restart latest downloads')}>
+              <button className="button secondary" onClick={() => handleAction(() => syncApi.restartDownloadLatest(selectedProduct), 'Restart latest downloads')}>
                 🔄 Restart
               </button>
             </>
           ) : (
             <>
-              <button className="button" onClick={() => handleAction(syncApi.startDownloadLatest, 'Start latest downloads')}>
+              <button className="button" onClick={() => handleAction(() => syncApi.startDownloadLatest(selectedProduct), 'Start latest downloads')}>
                 ▶️ Start
               </button>
               {syncStatus?.downloadLatest && (
-                <button className="button secondary" onClick={() => handleAction(syncApi.restartDownloadLatest, 'Restart latest downloads')}>
+                <button className="button secondary" onClick={() => handleAction(() => syncApi.restartDownloadLatest(selectedProduct), 'Restart latest downloads')}>
                   🔄 Restart
                 </button>
               )}
@@ -450,25 +467,25 @@ export const Admin: React.FC = () => {
 
         <div style={{ marginTop: 'var(--space-lg)', display: 'flex', gap: 'var(--space-sm)' }}>
           {syncStatus?.downloadAll?.status === 'RUNNING' ? (
-            <button className="button secondary" onClick={() => handleAction(syncApi.pauseDownloadAll, 'Pause all downloads')}>
+            <button className="button secondary" onClick={() => handleAction(() => syncApi.pauseDownloadAll(selectedProduct), 'Pause all downloads')}>
               ⏸ Pause
             </button>
           ) : syncStatus?.downloadAll?.status === 'PAUSED' ? (
             <>
-              <button className="button" onClick={() => handleAction(syncApi.resumeDownloadAll, 'Resume all downloads')}>
+              <button className="button" onClick={() => handleAction(() => syncApi.resumeDownloadAll(selectedProduct), 'Resume all downloads')}>
                 ▶️ Resume
               </button>
-              <button className="button secondary" onClick={() => handleAction(syncApi.restartDownloadAll, 'Restart all downloads')}>
+              <button className="button secondary" onClick={() => handleAction(() => syncApi.restartDownloadAll(selectedProduct), 'Restart all downloads')}>
                 🔄 Restart
               </button>
             </>
           ) : (
             <>
-              <button className="button" onClick={() => handleAction(syncApi.startDownloadAll, 'Start all downloads')}>
+              <button className="button" onClick={() => handleAction(() => syncApi.startDownloadAll(selectedProduct), 'Start all downloads')}>
                 ▶️ Start
               </button>
               {syncStatus?.downloadAll && (
-                <button className="button secondary" onClick={() => handleAction(syncApi.restartDownloadAll, 'Restart all downloads')}>
+                <button className="button secondary" onClick={() => handleAction(() => syncApi.restartDownloadAll(selectedProduct), 'Restart all downloads')}>
                   🔄 Restart
                 </button>
               )}

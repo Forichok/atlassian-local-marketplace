@@ -11,7 +11,8 @@ datasource db {
 
 model Plugin {
   id             String          @id @default(uuid())
-  addonKey       String          @unique
+  addonKey       String
+  productType    ProductType     @default(JIRA)
   appId          String?
   name           String
   vendor         String?
@@ -24,9 +25,11 @@ model Plugin {
   versions       PluginVersion[]
   files          PluginFile[]
 
+  @@unique([addonKey, productType])
   @@index([addonKey])
   @@index([name])
   @@index([batchNumber])
+  @@index([productType])
 }
 
 model PluginVersion {
@@ -34,8 +37,8 @@ model PluginVersion {
   pluginId                String
   version                 String
   releaseDate             DateTime?
-  jiraMin                 String?
-  jiraMax                 String?
+  productVersionMin       String?
+  productVersionMax       String?
   dataCenterCompatible    Boolean   @default(true)
   releaseNotes            String?   @db.Text
   changelogUrl            String?
@@ -91,6 +94,7 @@ enum PluginDownloadStatus {
 
 model SyncJob {
   id                String        @id @default(uuid())
+  productType       ProductType   @default(JIRA)
   stage             SyncStage
   status            JobStatus     @default(IDLE)
   totalItems        Int           @default(0)
@@ -110,9 +114,11 @@ model SyncJob {
   progress          SyncJobProgress[]
   logs              SyncJobLog[]
 
+  @@unique([productType, stage])
   @@index([stage])
   @@index([status])
   @@index([currentBatch])
+  @@index([productType])
 }
 
 enum SyncStage {
@@ -165,4 +171,9 @@ enum LogLevel {
   INFO
   WARN
   ERROR
+}
+
+enum ProductType {
+  JIRA
+  CONFLUENCE
 }
