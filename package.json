@@ -1,7 +1,7 @@
 {
   "name": "dc-pluginx",
   "version": "1.0.0",
-  "description": "Local Atlassian Marketplace knowledge base for Jira Data Center plugins",
+  "description": "Local Atlassian Marketplace knowledge base for Atlassian Data Center plugins",
   "private": true,
   "workspaces": [
     "backend",

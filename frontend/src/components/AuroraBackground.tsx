@@ -5,8 +5,8 @@ export const AuroraBackground: React.FC = () => {
   const { theme } = useTheme();
 
   const background = theme === 'dark'
-    ? 'linear-gradient(135deg, #0a0e27 0%, #1a1f3a 100%)'
-    : 'linear-gradient(135deg, #f5f6f7 0%, #e9ecef 100%)';
+    ? 'radial-gradient(ellipse at top, #0a0e27 0%, #050810 100%)'
+    : 'radial-gradient(ellipse at top, #ffffff 0%, #f0f4ff 50%, #e6f0ff 100%)';
 
   return (
     <div style={{
@@ -38,7 +38,9 @@ export const AuroraBackground: React.FC = () => {
         left: '30%',
         width: '600px',
         height: '600px',
-        background: 'radial-gradient(circle, rgba(0, 82, 204, 0.08) 0%, transparent 70%)',
+        background: theme === 'dark'
+          ? 'radial-gradient(circle, rgba(0, 82, 204, 0.15) 0%, transparent 70%)'
+          : 'radial-gradient(circle, rgba(0, 82, 204, 0.08) 0%, transparent 70%)',
         borderRadius: '50%',
         animation: 'aurora1 25s ease-in-out infinite',
         willChange: 'transform'
@@ -50,7 +52,9 @@ export const AuroraBackground: React.FC = () => {
         left: '70%',
         width: '500px',
         height: '500px',
-        background: 'radial-gradient(circle, rgba(0, 101, 255, 0.06) 0%, transparent 70%)',
+        background: theme === 'dark'
+          ? 'radial-gradient(circle, rgba(0, 101, 255, 0.12) 0%, transparent 70%)'
+          : 'radial-gradient(circle, rgba(0, 101, 255, 0.06) 0%, transparent 70%)',
         borderRadius: '50%',
         animation: 'aurora2 30s ease-in-out infinite',
         willChange: 'transform'

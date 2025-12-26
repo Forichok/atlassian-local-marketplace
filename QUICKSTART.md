@@ -28,7 +28,7 @@ All stages can be **paused** and **resumed** at any time.
 
 ## What You'll Get
 
-- **~6000+ Jira Data Center plugins** with full metadata
+- **~6000+ Atlassian Data Center plugins** with full metadata
 - **Version history** for each plugin
 - **Local JAR files** ready to download
 - **Search** by name, vendor, or addon key

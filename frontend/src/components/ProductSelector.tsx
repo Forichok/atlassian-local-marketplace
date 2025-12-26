@@ -1,4 +1,5 @@
 import React from 'react';
+import { Boxes, BookOpen } from 'lucide-react';
 
 export type ProductType = 'JIRA' | 'CONFLUENCE';
 
@@ -53,7 +54,7 @@ export const ProductSelector: React.FC<ProductSelectorProps> = ({ selected, onCh
           }
         }}
       >
-        <span style={{ fontSize: '16px' }}>🔷</span>
+        <Boxes size={16} />
         <span>Jira</span>
       </button>
       <button
@@ -90,7 +91,7 @@ export const ProductSelector: React.FC<ProductSelectorProps> = ({ selected, onCh
           }
         }}
       >
-        <span style={{ fontSize: '16px' }}>📘</span>
+        <BookOpen size={16} />
         <span>Confluence</span>
       </button>
     </div>

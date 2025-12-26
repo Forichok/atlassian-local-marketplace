@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { useParams, useNavigate, useSearchParams } from 'react-router-dom';
+import { RefreshCw, Loader2, Package, Download } from 'lucide-react';
 import { pluginsApi, ProductType } from '../api/client';
 import { Plugin, PluginVersion } from '../types';
 import { VersionModal } from '../components/VersionModal';
@@ -227,7 +228,15 @@ export const PluginDetail: React.FC = () => {
             variant="primary"
             size="medium"
           >
-            {resyncing ? '⏳ Resyncing...' : '🔄 Force Resync'}
+            {resyncing ? (
+              <>
+                <Loader2 size={16} className="loading-spinner" /> Resyncing...
+              </>
+            ) : (
+              <>
+                <RefreshCw size={16} /> Force Resync
+              </>
+            )}
           </NeonButton>
         </div>
         {plugin.summary && (
@@ -341,9 +350,12 @@ export const PluginDetail: React.FC = () => {
             background: 'linear-gradient(135deg, #0052cc, #0065ff)',
             WebkitBackgroundClip: 'text',
             WebkitTextFillColor: 'transparent',
-            backgroundClip: 'text'
+            backgroundClip: 'text',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '8px'
           }}>
-            📦 Versions
+            <Package size={24} /> Versions
           </h2>
           <div style={{
             background: 'rgba(0, 82, 204, 0.05)',
@@ -445,7 +457,7 @@ export const PluginDetail: React.FC = () => {
                             variant="success"
                             size="small"
                           >
-                            ⬇️ Download
+                            <Download size={14} /> Download
                           </NeonButton>
                         ) : file?.downloadStatus === 'FAILED' ? (
                           <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', alignItems: 'flex-start' }}>
@@ -464,7 +476,7 @@ export const PluginDetail: React.FC = () => {
                               variant="warning"
                               size="small"
                             >
-                              🔄 Retry
+                              <RefreshCw size={14} /> Retry
                             </NeonButton>
                           </div>
                         ) : file?.downloadStatus === 'DOWNLOADING' ? (
@@ -496,7 +508,7 @@ export const PluginDetail: React.FC = () => {
                             variant="primary"
                             size="small"
                           >
-                            ⬇️ Force Download
+                            <Download size={14} /> Force Download
                           </NeonButton>
                         )}
                       </td>

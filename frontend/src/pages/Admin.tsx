@@ -1,10 +1,15 @@
 import React, { useEffect, useState } from 'react';
+import { Boxes, BookOpen, Package, FileText, HardDrive, Download, PackageOpen, Pause, Play, RotateCw, AlertTriangle, X, ScrollText, Inbox } from 'lucide-react';
 import { syncApi, pluginsApi, ProductType } from '../api/client';
 import { SyncStatus, PluginStats } from '../types';
 import { Loading } from '../components/Loading';
 import { AnimatedNumber } from '../components/AnimatedNumber';
 import { useToast } from '../components/Toast';
 import { ProductSelector } from '../components/ProductSelector';
+import {
+  PageHeader,
+  StatCard,
+} from '../components/ui';
 
 export const Admin: React.FC = () => {
   const [selectedProduct, setSelectedProduct] = useState<ProductType>('JIRA');
@@ -54,105 +59,82 @@ export const Admin: React.FC = () => {
     );
   }
 
-  const productIcon = selectedProduct === 'JIRA' ? '🔷' : '📘';
+  const ProductIcon = selectedProduct === 'JIRA' ? Boxes : BookOpen;
 
   return (
     <div className="container">
-      <div style={{
-        marginBottom: 'var(--space-2xl)'
-      }}>
-        <div style={{
-          display: 'flex',
-          alignItems: 'flex-start',
-          justifyContent: 'space-between',
-          marginBottom: 'var(--space-lg)'
-        }}>
-          <div>
-            <h1 style={{
-              fontSize: '42px',
-              fontWeight: 800,
-              background: 'var(--gradient-jira)',
-              WebkitBackgroundClip: 'text',
-              WebkitTextFillColor: 'transparent',
-              backgroundClip: 'text',
-              marginBottom: '8px',
-              letterSpacing: '-1px'
-            }}>
-              Sync Administration
-            </h1>
-            <p style={{
-              fontSize: '16px',
-              color: 'var(--color-text-secondary)',
-              fontWeight: 500
-            }}>
-              Monitor and control plugin synchronization processes
-            </p>
-          </div>
+      <PageHeader
+        title="Sync Administration"
+        description="Monitor and control plugin synchronization processes"
+        action={
           <ProductSelector
             selected={selectedProduct}
             onChange={setSelectedProduct}
           />
-        </div>
-      </div>
+        }
+      />
 
       {stats && (
         <div className="stats-grid">
-          <div className="stat-card">
-            <h3>{productIcon} Total Plugins</h3>
-            <div className="value">
+          <StatCard
+            icon={<ProductIcon size={24} />}
+            title="Total Plugins"
+            value={
               <AnimatedNumber
                 value={stats.totalPlugins}
                 formatter={(v) => Math.round(v).toLocaleString()}
               />
-            </div>
-          </div>
-          <div className="stat-card">
-            <h3>📦 Total Versions</h3>
-            <div className="value">
+            }
+          />
+          <StatCard
+            icon={<Package size={24} />}
+            title="Total Versions"
+            value={
               <AnimatedNumber
                 value={stats.totalVersions}
                 formatter={(v) => Math.round(v).toLocaleString()}
               />
-            </div>
-          </div>
-          <div className="stat-card">
-            <h3>📄 Downloaded Files</h3>
-            <div className="value">
+            }
+          />
+          <StatCard
+            icon={<FileText size={24} />}
+            title="Downloaded Files"
+            value={
               <AnimatedNumber
                 value={stats.downloadedFiles}
                 formatter={(v) => Math.round(v).toLocaleString()}
               />
-            </div>
-            {stats.totalFiles > 0 && (
-              <div style={{
-                marginTop: '12px',
-                fontSize: '14px',
-                fontWeight: 600,
-                color: 'var(--color-success)'
-              }}>
-                <AnimatedNumber
-                  value={Math.round((stats.downloadedFiles / stats.totalFiles) * 100)}
-                  formatter={(v) => `${Math.round(v)}% complete`}
-                />
-              </div>
-            )}
-          </div>
-          <div className="stat-card">
-            <h3>💾 Total Storage</h3>
-            <div className="value">
+            }
+            subtitle={
+              stats.totalFiles > 0 && (
+                <span style={{ color: 'var(--color-success)' }}>
+                  <AnimatedNumber
+                    value={Math.round((stats.downloadedFiles / stats.totalFiles) * 100)}
+                    formatter={(v) => `${Math.round(v)}% complete`}
+                  />
+                </span>
+              )
+            }
+          />
+          <StatCard
+            icon={<HardDrive size={24} />}
+            title="Total Storage"
+            value={
               <AnimatedNumber
                 value={stats.totalSize / 1024 / 1024 / 1024}
                 decimals={2}
                 formatter={(v) => `${v.toFixed(2)} GB`}
               />
-            </div>
-          </div>
+            }
+          />
         </div>
       )}
 
-      <div className="card">
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 'var(--space-lg)' }}>
-          <h2 style={{ margin: 0 }}>📥 Stage 1: Metadata Ingestion</h2>
+      <div className="card stage-card">
+        <div className="stage-header">
+          <h2 style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <Inbox size={24} /> Stage 1: Metadata Ingestion
+          </h2>
           {syncStatus?.metadata && (
             <span className={`status-badge ${syncStatus.metadata.status.toLowerCase()}`}>
               {syncStatus.metadata.status}
@@ -162,33 +144,16 @@ export const Admin: React.FC = () => {
 
         {syncStatus?.metadata && (
           <>
-            <div style={{
-              display: 'flex',
-              justifyContent: 'space-between',
-              alignItems: 'center',
-              marginBottom: 'var(--space-md)',
-              padding: 'var(--space-md)',
-              background: 'rgba(0, 82, 204, 0.05)',
-              borderRadius: 'var(--radius-md)',
-            }}>
+            <div className="progress-info">
               <div>
-                <div style={{ fontSize: '14px', fontWeight: 600, color: 'var(--color-text-secondary)', marginBottom: '4px' }}>
-                  Progress
-                </div>
-                <div style={{ fontSize: '20px', fontWeight: 700, color: 'var(--color-primary)' }}>
+                <div className="progress-label">Progress</div>
+                <div className="progress-value">
                   {syncStatus.metadata.processedItems.toLocaleString()} / {syncStatus.metadata.totalItems.toLocaleString()}
                 </div>
               </div>
               {syncStatus.metadata.failedItems > 0 && (
-                <div style={{
-                  padding: '8px 16px',
-                  background: 'rgba(222, 53, 11, 0.1)',
-                  borderRadius: 'var(--radius-full)',
-                  fontSize: '14px',
-                  fontWeight: 600,
-                  color: 'var(--color-danger)'
-                }}>
-                  ⚠️ {syncStatus.metadata.failedItems} failed
+                <div className="failed-badge" style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                  <AlertTriangle size={16} /> {syncStatus.metadata.failedItems} failed
                 </div>
               )}
             </div>
@@ -205,44 +170,35 @@ export const Admin: React.FC = () => {
             </div>
 
             {syncStatus.metadata.lastError && (
-              <div style={{
-                marginTop: 'var(--space-md)',
-                padding: 'var(--space-md)',
-                background: 'rgba(222, 53, 11, 0.05)',
-                borderRadius: 'var(--radius-md)',
-                borderLeft: '3px solid var(--color-danger)',
-                color: 'var(--color-danger)',
-                fontSize: '14px',
-                fontWeight: 500
-              }}>
-                ❌ Error: {syncStatus.metadata.lastError}
+              <div className="error-message" style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <X size={18} /> Error: {syncStatus.metadata.lastError}
               </div>
             )}
           </>
         )}
 
-        <div style={{ marginTop: 'var(--space-lg)', display: 'flex', gap: 'var(--space-sm)' }}>
+        <div className="stage-actions">
           {syncStatus?.metadata?.status === 'RUNNING' ? (
-            <button className="button secondary" onClick={() => handleAction(() => syncApi.pauseMetadata(selectedProduct), 'Pause metadata sync')}>
-              ⏸ Pause
+            <button className="button secondary" onClick={() => handleAction(() => syncApi.pauseMetadata(selectedProduct), 'Pause metadata sync')} style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+              <Pause size={16} /> Pause
             </button>
           ) : syncStatus?.metadata?.status === 'PAUSED' ? (
             <>
-              <button className="button" onClick={() => handleAction(() => syncApi.resumeMetadata(selectedProduct), 'Resume metadata sync')}>
-                ▶️ Resume
+              <button className="button" onClick={() => handleAction(() => syncApi.resumeMetadata(selectedProduct), 'Resume metadata sync')} style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                <Play size={16} /> Resume
               </button>
-              <button className="button secondary" onClick={() => handleAction(() => syncApi.restartMetadata(selectedProduct), 'Restart metadata sync')}>
-                🔄 Restart
+              <button className="button secondary" onClick={() => handleAction(() => syncApi.restartMetadata(selectedProduct), 'Restart metadata sync')} style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                <RotateCw size={16} /> Restart
               </button>
             </>
           ) : (
             <>
-              <button className="button" onClick={() => handleAction(() => syncApi.startMetadata(selectedProduct), 'Start metadata sync')}>
-                ▶️ Start
+              <button className="button" onClick={() => handleAction(() => syncApi.startMetadata(selectedProduct), 'Start metadata sync')} style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                <Play size={16} /> Start
               </button>
               {syncStatus?.metadata && (
-                <button className="button secondary" onClick={() => handleAction(() => syncApi.restartMetadata(selectedProduct), 'Restart metadata sync')}>
-                  🔄 Restart
+                <button className="button secondary" onClick={() => handleAction(() => syncApi.restartMetadata(selectedProduct), 'Restart metadata sync')} style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                  <RotateCw size={16} /> Restart
                 </button>
               )}
             </>
@@ -250,21 +206,12 @@ export const Admin: React.FC = () => {
         </div>
 
         {syncStatus?.metadata?.progress && syncStatus.metadata.progress.length > 0 && (
-          <div style={{ marginTop: 'var(--space-xl)', paddingTop: 'var(--space-lg)', borderTop: '1px solid rgba(0, 0, 0, 0.06)' }}>
-            <h3 style={{ fontSize: '14px', fontWeight: 700, marginBottom: 'var(--space-md)', color: 'var(--color-text-secondary)', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
-              Recent Activity
-            </h3>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-xs)' }}>
+          <div className="recent-activity">
+            <h3 className="activity-title">Recent Activity</h3>
+            <div className="activity-list">
               {syncStatus.metadata.progress.slice(0, 5).map((p) => (
-                <div key={p.id} style={{
-                  fontSize: '13px',
-                  padding: '8px 12px',
-                  background: 'rgba(0, 0, 0, 0.02)',
-                  borderRadius: 'var(--radius-sm)',
-                  fontFamily: 'var(--font-mono)',
-                  color: 'var(--color-text-secondary)'
-                }}>
-                  <span style={{ fontWeight: 600, color: 'var(--color-primary)' }}>[{p.phase}]</span> {p.message}
+                <div key={p.id} className="activity-item">
+                  <span className="activity-phase">[{p.phase}]</span> {p.message}
                 </div>
               ))}
             </div>
@@ -272,9 +219,11 @@ export const Admin: React.FC = () => {
         )}
       </div>
 
-      <div className="card">
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 'var(--space-lg)' }}>
-          <h2 style={{ margin: 0 }}>⬇️ Stage 2: Download Latest Versions</h2>
+      <div className="card stage-card">
+        <div className="stage-header">
+          <h2 style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <Download size={24} /> Stage 2: Download Latest Versions
+          </h2>
           {syncStatus?.downloadLatest && (
             <span className={`status-badge ${syncStatus.downloadLatest.status.toLowerCase()}`}>
               {syncStatus.downloadLatest.status}
@@ -284,33 +233,16 @@ export const Admin: React.FC = () => {
 
         {syncStatus?.downloadLatest && (
           <>
-            <div style={{
-              display: 'flex',
-              justifyContent: 'space-between',
-              alignItems: 'center',
-              marginBottom: 'var(--space-md)',
-              padding: 'var(--space-md)',
-              background: 'rgba(0, 82, 204, 0.05)',
-              borderRadius: 'var(--radius-md)',
-            }}>
+            <div className="progress-info">
               <div>
-                <div style={{ fontSize: '14px', fontWeight: 600, color: 'var(--color-text-secondary)', marginBottom: '4px' }}>
-                  Progress
-                </div>
-                <div style={{ fontSize: '20px', fontWeight: 700, color: 'var(--color-primary)' }}>
+                <div className="progress-label">Progress</div>
+                <div className="progress-value">
                   {syncStatus.downloadLatest.processedItems.toLocaleString()} / {syncStatus.downloadLatest.totalItems.toLocaleString()}
                 </div>
               </div>
               {syncStatus.downloadLatest.failedItems > 0 && (
-                <div style={{
-                  padding: '8px 16px',
-                  background: 'rgba(222, 53, 11, 0.1)',
-                  borderRadius: 'var(--radius-full)',
-                  fontSize: '14px',
-                  fontWeight: 600,
-                  color: 'var(--color-danger)'
-                }}>
-                  ⚠️ {syncStatus.downloadLatest.failedItems} failed
+                <div className="failed-badge" style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                  <AlertTriangle size={16} /> {syncStatus.downloadLatest.failedItems} failed
                 </div>
               )}
             </div>
@@ -327,44 +259,35 @@ export const Admin: React.FC = () => {
             </div>
 
             {syncStatus.downloadLatest.lastError && (
-              <div style={{
-                marginTop: 'var(--space-md)',
-                padding: 'var(--space-md)',
-                background: 'rgba(222, 53, 11, 0.05)',
-                borderRadius: 'var(--radius-md)',
-                borderLeft: '3px solid var(--color-danger)',
-                color: 'var(--color-danger)',
-                fontSize: '14px',
-                fontWeight: 500
-              }}>
-                ❌ Error: {syncStatus.downloadLatest.lastError}
+              <div className="error-message" style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <X size={18} /> Error: {syncStatus.downloadLatest.lastError}
               </div>
             )}
           </>
         )}
 
-        <div style={{ marginTop: 'var(--space-lg)', display: 'flex', gap: 'var(--space-sm)' }}>
+        <div className="stage-actions">
           {syncStatus?.downloadLatest?.status === 'RUNNING' ? (
-            <button className="button secondary" onClick={() => handleAction(() => syncApi.pauseDownloadLatest(selectedProduct), 'Pause latest downloads')}>
-              ⏸ Pause
+            <button className="button secondary" onClick={() => handleAction(() => syncApi.pauseDownloadLatest(selectedProduct), 'Pause latest downloads')} style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+              <Pause size={16} /> Pause
             </button>
           ) : syncStatus?.downloadLatest?.status === 'PAUSED' ? (
             <>
-              <button className="button" onClick={() => handleAction(() => syncApi.resumeDownloadLatest(selectedProduct), 'Resume latest downloads')}>
-                ▶️ Resume
+              <button className="button" onClick={() => handleAction(() => syncApi.resumeDownloadLatest(selectedProduct), 'Resume latest downloads')} style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                <Play size={16} /> Resume
               </button>
-              <button className="button secondary" onClick={() => handleAction(() => syncApi.restartDownloadLatest(selectedProduct), 'Restart latest downloads')}>
-                🔄 Restart
+              <button className="button secondary" onClick={() => handleAction(() => syncApi.restartDownloadLatest(selectedProduct), 'Restart latest downloads')} style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                <RotateCw size={16} /> Restart
               </button>
             </>
           ) : (
             <>
-              <button className="button" onClick={() => handleAction(() => syncApi.startDownloadLatest(selectedProduct), 'Start latest downloads')}>
-                ▶️ Start
+              <button className="button" onClick={() => handleAction(() => syncApi.startDownloadLatest(selectedProduct), 'Start latest downloads')} style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                <Play size={16} /> Start
               </button>
               {syncStatus?.downloadLatest && (
-                <button className="button secondary" onClick={() => handleAction(() => syncApi.restartDownloadLatest(selectedProduct), 'Restart latest downloads')}>
-                  🔄 Restart
+                <button className="button secondary" onClick={() => handleAction(() => syncApi.restartDownloadLatest(selectedProduct), 'Restart latest downloads')} style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                  <RotateCw size={16} /> Restart
                 </button>
               )}
             </>
@@ -372,21 +295,12 @@ export const Admin: React.FC = () => {
         </div>
 
         {syncStatus?.downloadLatest?.progress && syncStatus.downloadLatest.progress.length > 0 && (
-          <div style={{ marginTop: 'var(--space-xl)', paddingTop: 'var(--space-lg)', borderTop: '1px solid rgba(0, 0, 0, 0.06)' }}>
-            <h3 style={{ fontSize: '14px', fontWeight: 700, marginBottom: 'var(--space-md)', color: 'var(--color-text-secondary)', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
-              Recent Activity
-            </h3>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-xs)' }}>
+          <div className="recent-activity">
+            <h3 className="activity-title">Recent Activity</h3>
+            <div className="activity-list">
               {syncStatus.downloadLatest.progress.slice(0, 5).map((p) => (
-                <div key={p.id} style={{
-                  fontSize: '13px',
-                  padding: '8px 12px',
-                  background: 'rgba(0, 0, 0, 0.02)',
-                  borderRadius: 'var(--radius-sm)',
-                  fontFamily: 'var(--font-mono)',
-                  color: 'var(--color-text-secondary)'
-                }}>
-                  <span style={{ fontWeight: 600, color: 'var(--color-primary)' }}>[{p.phase}]</span> {p.message}
+                <div key={p.id} className="activity-item">
+                  <span className="activity-phase">[{p.phase}]</span> {p.message}
                 </div>
               ))}
             </div>
@@ -394,9 +308,11 @@ export const Admin: React.FC = () => {
         )}
       </div>
 
-      <div className="card">
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 'var(--space-lg)' }}>
-          <h2 style={{ margin: 0 }}>📦 Stage 3: Download All Versions</h2>
+      <div className="card stage-card">
+        <div className="stage-header">
+          <h2 style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <PackageOpen size={24} /> Stage 3: Download All Versions
+          </h2>
           {syncStatus?.downloadAll && (
             <span className={`status-badge ${syncStatus.downloadAll.status.toLowerCase()}`}>
               {syncStatus.downloadAll.status}
@@ -406,33 +322,16 @@ export const Admin: React.FC = () => {
 
         {syncStatus?.downloadAll && (
           <>
-            <div style={{
-              display: 'flex',
-              justifyContent: 'space-between',
-              alignItems: 'center',
-              marginBottom: 'var(--space-md)',
-              padding: 'var(--space-md)',
-              background: 'rgba(0, 82, 204, 0.05)',
-              borderRadius: 'var(--radius-md)',
-            }}>
+            <div className="progress-info">
               <div>
-                <div style={{ fontSize: '14px', fontWeight: 600, color: 'var(--color-text-secondary)', marginBottom: '4px' }}>
-                  Progress
-                </div>
-                <div style={{ fontSize: '20px', fontWeight: 700, color: 'var(--color-primary)' }}>
+                <div className="progress-label">Progress</div>
+                <div className="progress-value">
                   {syncStatus.downloadAll.processedItems.toLocaleString()} / {syncStatus.downloadAll.totalItems.toLocaleString()}
                 </div>
               </div>
               {syncStatus.downloadAll.failedItems > 0 && (
-                <div style={{
-                  padding: '8px 16px',
-                  background: 'rgba(222, 53, 11, 0.1)',
-                  borderRadius: 'var(--radius-full)',
-                  fontSize: '14px',
-                  fontWeight: 600,
-                  color: 'var(--color-danger)'
-                }}>
-                  ⚠️ {syncStatus.downloadAll.failedItems} failed
+                <div className="failed-badge" style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                  <AlertTriangle size={16} /> {syncStatus.downloadAll.failedItems} failed
                 </div>
               )}
             </div>
@@ -449,44 +348,35 @@ export const Admin: React.FC = () => {
             </div>
 
             {syncStatus.downloadAll.lastError && (
-              <div style={{
-                marginTop: 'var(--space-md)',
-                padding: 'var(--space-md)',
-                background: 'rgba(222, 53, 11, 0.05)',
-                borderRadius: 'var(--radius-md)',
-                borderLeft: '3px solid var(--color-danger)',
-                color: 'var(--color-danger)',
-                fontSize: '14px',
-                fontWeight: 500
-              }}>
-                ❌ Error: {syncStatus.downloadAll.lastError}
+              <div className="error-message" style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <X size={18} /> Error: {syncStatus.downloadAll.lastError}
               </div>
             )}
           </>
         )}
 
-        <div style={{ marginTop: 'var(--space-lg)', display: 'flex', gap: 'var(--space-sm)' }}>
+        <div className="stage-actions">
           {syncStatus?.downloadAll?.status === 'RUNNING' ? (
-            <button className="button secondary" onClick={() => handleAction(() => syncApi.pauseDownloadAll(selectedProduct), 'Pause all downloads')}>
-              ⏸ Pause
+            <button className="button secondary" onClick={() => handleAction(() => syncApi.pauseDownloadAll(selectedProduct), 'Pause all downloads')} style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+              <Pause size={16} /> Pause
             </button>
           ) : syncStatus?.downloadAll?.status === 'PAUSED' ? (
             <>
-              <button className="button" onClick={() => handleAction(() => syncApi.resumeDownloadAll(selectedProduct), 'Resume all downloads')}>
-                ▶️ Resume
+              <button className="button" onClick={() => handleAction(() => syncApi.resumeDownloadAll(selectedProduct), 'Resume all downloads')} style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                <Play size={16} /> Resume
               </button>
-              <button className="button secondary" onClick={() => handleAction(() => syncApi.restartDownloadAll(selectedProduct), 'Restart all downloads')}>
-                🔄 Restart
+              <button className="button secondary" onClick={() => handleAction(() => syncApi.restartDownloadAll(selectedProduct), 'Restart all downloads')} style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                <RotateCw size={16} /> Restart
               </button>
             </>
           ) : (
             <>
-              <button className="button" onClick={() => handleAction(() => syncApi.startDownloadAll(selectedProduct), 'Start all downloads')}>
-                ▶️ Start
+              <button className="button" onClick={() => handleAction(() => syncApi.startDownloadAll(selectedProduct), 'Start all downloads')} style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                <Play size={16} /> Start
               </button>
               {syncStatus?.downloadAll && (
-                <button className="button secondary" onClick={() => handleAction(() => syncApi.restartDownloadAll(selectedProduct), 'Restart all downloads')}>
-                  🔄 Restart
+                <button className="button secondary" onClick={() => handleAction(() => syncApi.restartDownloadAll(selectedProduct), 'Restart all downloads')} style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                  <RotateCw size={16} /> Restart
                 </button>
               )}
             </>
@@ -494,21 +384,12 @@ export const Admin: React.FC = () => {
         </div>
 
         {syncStatus?.downloadAll?.progress && syncStatus.downloadAll.progress.length > 0 && (
-          <div style={{ marginTop: 'var(--space-xl)', paddingTop: 'var(--space-lg)', borderTop: '1px solid rgba(0, 0, 0, 0.06)' }}>
-            <h3 style={{ fontSize: '14px', fontWeight: 700, marginBottom: 'var(--space-md)', color: 'var(--color-text-secondary)', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
-              Recent Activity
-            </h3>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-xs)' }}>
+          <div className="recent-activity">
+            <h3 className="activity-title">Recent Activity</h3>
+            <div className="activity-list">
               {syncStatus.downloadAll.progress.slice(0, 5).map((p) => (
-                <div key={p.id} style={{
-                  fontSize: '13px',
-                  padding: '8px 12px',
-                  background: 'rgba(0, 0, 0, 0.02)',
-                  borderRadius: 'var(--radius-sm)',
-                  fontFamily: 'var(--font-mono)',
-                  color: 'var(--color-text-secondary)'
-                }}>
-                  <span style={{ fontWeight: 600, color: 'var(--color-primary)' }}>[{p.phase}]</span> {p.message}
+                <div key={p.id} className="activity-item">
+                  <span className="activity-phase">[{p.phase}]</span> {p.message}
                 </div>
               ))}
             </div>
@@ -518,13 +399,13 @@ export const Admin: React.FC = () => {
 
       {syncStatus?.metadata?.logs && syncStatus.metadata.logs.length > 0 && (
         <div className="card">
-          <h2 style={{ marginBottom: 'var(--space-lg)', display: 'flex', alignItems: 'center', gap: 'var(--space-sm)' }}>
-            📋 Recent Logs
+          <h2 className="logs-title" style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <ScrollText size={24} /> Recent Logs
           </h2>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-xs)' }}>
+          <div className="logs-container">
             {syncStatus.metadata.logs.slice(0, 20).map((log) => (
               <div key={log.id} className={`log-entry ${log.level.toLowerCase()}`}>
-                <strong style={{ textTransform: 'uppercase' }}>{log.level}</strong>: {log.message}
+                <strong className="log-level">{log.level}</strong>: {log.message}
               </div>
             ))}
           </div>

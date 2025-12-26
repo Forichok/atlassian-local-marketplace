@@ -1,5 +1,6 @@
 import React, { useEffect, useState, memo } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
+import { Package, FileText, HardDrive, Boxes, BookOpen, Search } from 'lucide-react';
 import { pluginsApi, ProductType } from '../api/client';
 import { Plugin } from '../types';
 import { PluginCardSkeleton } from '../components/PluginCardSkeleton';
@@ -8,9 +9,9 @@ import { AnimatedNumber } from '../components/AnimatedNumber';
 import { ProductSelector } from '../components/ProductSelector';
 import { CustomSelect } from '../components/CustomSelect';
 
-const PluginCard = memo(({ plugin, productIcon, productName, jiraVersion, onClick }: {
+const PluginCard = memo(({ plugin, ProductIcon, productName, jiraVersion, onClick }: {
   plugin: Plugin;
-  productIcon: string;
+  ProductIcon: typeof Boxes | typeof BookOpen;
   productName: string;
   jiraVersion?: number;
   onClick: () => void;
@@ -19,7 +20,9 @@ const PluginCard = memo(({ plugin, productIcon, productName, jiraVersion, onClic
   <div className="plugin-card" onClick={onClick}>
     <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: 'var(--space-sm)' }}>
       <h3 style={{ margin: 0, flex: 1 }}>{plugin.name}</h3>
-      <span style={{ fontSize: '20px', marginLeft: 'var(--space-sm)' }}>{productIcon}</span>
+      <div style={{ marginLeft: 'var(--space-sm)' }}>
+        <ProductIcon size={20} />
+      </div>
     </div>
     {plugin.vendor && <div className="vendor">by {plugin.vendor}</div>}
     {plugin.summary && <div className="summary">{plugin.summary}</div>}
@@ -49,16 +52,16 @@ const PluginCard = memo(({ plugin, productIcon, productName, jiraVersion, onClic
     )}
     <div style={{ fontSize: '13px', color: 'var(--color-text-tertiary)', fontWeight: 600, display: 'flex', gap: '12px', alignItems: 'center', flexWrap: 'wrap' }}>
       <span style={{ background: 'rgba(0, 82, 204, 0.1)', padding: '4px 10px', borderRadius: '6px', display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
-        📦 <AnimatedNumber value={plugin._count?.versions || 0} decimals={0} /> versions
+        <Package size={14} /> <AnimatedNumber value={plugin._count?.versions || 0} decimals={0} /> versions
       </span>
       {plugin._count?.files && (
         <span style={{ background: 'rgba(0, 135, 90, 0.1)', padding: '4px 10px', borderRadius: '6px', display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
-          📄 <AnimatedNumber value={plugin._count.files} decimals={0} /> files
+          <FileText size={14} /> <AnimatedNumber value={plugin._count.files} decimals={0} /> files
         </span>
       )}
       {plugin.totalSize && plugin.totalSize > 0 && (
         <span style={{ background: 'rgba(0, 101, 255, 0.1)', padding: '4px 10px', borderRadius: '6px', display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
-          💾 <AnimatedNumber value={plugin.totalSize / 1024 / 1024} decimals={2} formatter={(v) => `${v.toFixed(2)} MB`} />
+          <HardDrive size={14} /> <AnimatedNumber value={plugin.totalSize / 1024 / 1024} decimals={2} formatter={(v) => `${v.toFixed(2)} MB`} />
         </span>
       )}
     </div>
@@ -134,7 +137,7 @@ export const Plugins: React.FC = () => {
     fetchPlugins();
   };
 
-  const productIcon = selectedProduct === 'JIRA' ? '🔷' : '📘';
+  const ProductIcon = selectedProduct === 'JIRA' ? Boxes : BookOpen;
   const productName = selectedProduct === 'JIRA' ? 'Jira' : 'Confluence';
 
   const versionOptions = selectedProduct === 'JIRA'
@@ -192,10 +195,11 @@ export const Plugins: React.FC = () => {
       </div>
 
       <form onSubmit={handleSearch} className="search-bar">
+        <Search size={18} style={{ color: 'var(--color-text-secondary)', flexShrink: 0 }} />
         <input
           type="text"
           className="input"
-          placeholder={`🔍 Search ${productName} plugins by name, key, or vendor...`}
+          placeholder={`Search ${productName} plugins by name, key, or vendor...`}
           value={search}
           onChange={(e) => setSearch(e.target.value)}
           style={{ background: 'transparent', border: 'none' }}
@@ -217,7 +221,7 @@ export const Plugins: React.FC = () => {
         <EmptyState
           title="No plugins found"
           description={`Try adjusting your search criteria or ${productName} version filter to find what you're looking for.`}
-          icon={productIcon}
+          icon={<ProductIcon size={48} />}
         />
       ) : (
         <>
@@ -226,7 +230,7 @@ export const Plugins: React.FC = () => {
               <PluginCard
                 key={plugin.id}
                 plugin={plugin}
-                productIcon={productIcon}
+                ProductIcon={ProductIcon}
                 productName={productName}
                 jiraVersion={jiraVersion}
                 onClick={() => navigate(`/plugins/${plugin.addonKey}?productType=${selectedProduct}`)}

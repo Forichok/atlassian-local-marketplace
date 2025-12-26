@@ -1,4 +1,9 @@
 import React, { useState, useEffect, useRef } from 'react';
+import {
+  Sparkles, Lock, Bug, RefreshCw, Trash2, FileText, Download,
+  Link, BarChart, ClipboardList, AlertTriangle, Calendar,
+  HardDrive, Package, Wrench, Inbox as InboxIcon, Zap, Check, Copy
+} from 'lucide-react';
 import { PluginVersion } from '../types';
 
 interface VersionModalProps {
@@ -158,15 +163,15 @@ export const VersionModal: React.FC<VersionModalProps> = ({ version, onClose, on
     return sections;
   };
 
-  const getSectionIcon = (type: string): string => {
+  const getSectionIcon = (type: string): React.ReactNode => {
     const lower = type.toLowerCase();
-    if (lower.includes('add') || lower.includes('new') || lower.includes('feature')) return '✨';
-    if (lower.includes('fix') || lower.includes('bug')) return '🐛';
-    if (lower.includes('secur')) return '🔒';
-    if (lower.includes('improv')) return '⚡';
-    if (lower.includes('chang')) return '🔄';
-    if (lower.includes('remov')) return '🗑️';
-    return '📝';
+    if (lower.includes('add') || lower.includes('new') || lower.includes('feature')) return <Sparkles size={20} />;
+    if (lower.includes('fix') || lower.includes('bug')) return <Bug size={20} />;
+    if (lower.includes('secur')) return <Lock size={20} />;
+    if (lower.includes('improv')) return <Zap size={20} />;
+    if (lower.includes('chang')) return <RefreshCw size={20} />;
+    if (lower.includes('remov')) return <Trash2 size={20} />;
+    return <FileText size={20} />;
   };
 
   const hasChangelog = !!(version.changelog || version.changelogUrl);
@@ -298,8 +303,8 @@ export const VersionModal: React.FC<VersionModalProps> = ({ version, onClose, on
           margin-bottom: 24px;
         }
         .version-info-card {
-          background: linear-gradient(135deg, rgba(0, 82, 204, 0.05) 0%, rgba(0, 101, 255, 0.08) 100%);
-          border: 1px solid rgba(0, 82, 204, 0.15);
+          background: linear-gradient(135deg, rgba(102, 126, 234, 0.05) 0%, rgba(118, 75, 162, 0.08) 100%);
+          border: 1px solid rgba(102, 126, 234, 0.15);
           border-radius: 12px;
           padding: 16px;
           transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
@@ -321,8 +326,8 @@ export const VersionModal: React.FC<VersionModalProps> = ({ version, onClose, on
         }
         .version-info-card:hover {
           transform: translateY(-2px);
-          box-shadow: 0 8px 16px rgba(0, 82, 204, 0.15);
-          border-color: rgba(0, 82, 204, 0.3);
+          box-shadow: 0 8px 16px rgba(102, 126, 234, 0.15);
+          border-color: rgba(102, 126, 234, 0.3);
         }
         .version-info-label {
           display: flex;
@@ -372,8 +377,8 @@ export const VersionModal: React.FC<VersionModalProps> = ({ version, onClose, on
           top: 12px;
           right: 12px;
           padding: 6px 10px;
-          background: rgba(0, 82, 204, 0.1);
-          border: 1px solid rgba(0, 82, 204, 0.2);
+          background: rgba(102, 126, 234, 0.1);
+          border: 1px solid rgba(102, 126, 234, 0.2);
           border-radius: 6px;
           cursor: pointer;
           font-size: 11px;
@@ -471,7 +476,7 @@ export const VersionModal: React.FC<VersionModalProps> = ({ version, onClose, on
         {/* Header with Gradient */}
         <div
           style={{
-            background: 'linear-gradient(135deg, #0052cc 0%, #0065ff 100%)',
+            background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
             padding: '28px 32px',
             position: 'relative',
             overflow: 'hidden',
@@ -518,9 +523,12 @@ export const VersionModal: React.FC<VersionModalProps> = ({ version, onClose, on
                     background: 'rgba(0, 168, 112, 0.95)',
                     padding: '6px 12px',
                     borderRadius: '6px',
-                    animation: 'fadeIn 0.2s ease-out'
+                    animation: 'fadeIn 0.2s ease-out',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '4px'
                   }}>
-                    ✓ Copied!
+                    <Check size={14} /> Copied!
                   </span>
                 )}
               </h2>
@@ -554,7 +562,7 @@ export const VersionModal: React.FC<VersionModalProps> = ({ version, onClose, on
                     e.currentTarget.style.background = 'rgba(255, 255, 255, 0.15)';
                   }}
                 >
-                  🔗 Share Link
+                  <Link size={14} /> Share Link
                 </button>
                 {onDownload && file?.downloadStatus === 'COMPLETED' && (
                   <button
@@ -585,7 +593,7 @@ export const VersionModal: React.FC<VersionModalProps> = ({ version, onClose, on
                       e.currentTarget.style.transform = 'scale(1)';
                     }}
                   >
-                    📥 Download
+                    <Download size={14} /> Download
                   </button>
                 )}
               </div>
@@ -642,16 +650,18 @@ export const VersionModal: React.FC<VersionModalProps> = ({ version, onClose, on
               className={`version-modal-tab ${activeTab === 'details' ? 'active' : ''}`}
               onClick={() => setActiveTab('details')}
               title="Details"
+              style={{ display: 'flex', alignItems: 'center', gap: '6px' }}
             >
-              📊 Details
+              <BarChart size={16} /> Details
             </button>
             {hasChangelog && (
               <button
                 className={`version-modal-tab ${activeTab === 'changelog' ? 'active' : ''}`}
                 onClick={() => setActiveTab('changelog')}
                 title="Changelog"
+                style={{ display: 'flex', alignItems: 'center', gap: '6px' }}
               >
-                📝 Changelog
+                <FileText size={16} /> Changelog
               </button>
             )}
             {hasReleaseNotes && (
@@ -659,8 +669,9 @@ export const VersionModal: React.FC<VersionModalProps> = ({ version, onClose, on
                 className={`version-modal-tab ${activeTab === 'notes' ? 'active' : ''}`}
                 onClick={() => setActiveTab('notes')}
                 title="Release Notes"
+                style={{ display: 'flex', alignItems: 'center', gap: '6px' }}
               >
-                📋 Release Notes
+                <ClipboardList size={16} /> Release Notes
               </button>
             )}
           </div>
@@ -671,7 +682,7 @@ export const VersionModal: React.FC<VersionModalProps> = ({ version, onClose, on
             display: 'flex',
             gap: '12px'
           }}>
-            <span>⌨️ ESC to close</span>
+            <span>ESC to close</span>
             <span>← → to navigate</span>
           </div>
         </div>
@@ -687,7 +698,7 @@ export const VersionModal: React.FC<VersionModalProps> = ({ version, onClose, on
         >
           {version.deprecated && (
             <div className="deprecated-banner">
-              <span style={{ fontSize: '24px' }}>⚠️</span>
+              <AlertTriangle size={24} />
               <div>
                 <div style={{ fontWeight: 700, color: 'var(--color-danger)', marginBottom: '4px' }}>
                   Deprecated Version
@@ -705,7 +716,7 @@ export const VersionModal: React.FC<VersionModalProps> = ({ version, onClose, on
                 {version.releaseDate && (
                   <div className="version-info-card">
                     <div className="version-info-label">
-                      📅 Release Date
+                      <Calendar size={14} /> Release Date
                     </div>
                     <div className="version-info-value">
                       {new Date(version.releaseDate).toLocaleDateString('en-US', {
@@ -720,7 +731,7 @@ export const VersionModal: React.FC<VersionModalProps> = ({ version, onClose, on
                 {sizeInMB && (
                   <div className="version-info-card">
                     <div className="version-info-label">
-                      💾 File Size
+                      <HardDrive size={14} /> File Size
                     </div>
                     <div className="version-info-value" style={{
                       fontVariantNumeric: 'tabular-nums',
@@ -734,7 +745,7 @@ export const VersionModal: React.FC<VersionModalProps> = ({ version, onClose, on
                 {file && (
                   <div className="version-info-card">
                     <div className="version-info-label">
-                      📦 Status
+                      <Package size={14} /> Status
                     </div>
                     <div style={{ marginTop: '4px' }}>
                       <span className={`status-badge ${file.downloadStatus.toLowerCase()}`}>
@@ -750,11 +761,12 @@ export const VersionModal: React.FC<VersionModalProps> = ({ version, onClose, on
                   <button
                     className="copy-button"
                     onClick={() => copyToClipboard(`${version.productVersionMin || '?'} - ${version.productVersionMax || '?'}`)}
+                    style={{ display: 'flex', alignItems: 'center', gap: '4px' }}
                   >
-                    {copied ? '✓ Copied' : '📋 Copy'}
+                    {copied ? <><Check size={12} /> Copied</> : <><Copy size={12} /> Copy</>}
                   </button>
                   <div className="version-info-label">
-                    🔧 Product Compatibility
+                    <Wrench size={14} /> Product Compatibility
                   </div>
                   <div className="version-info-value" style={{ marginBottom: '4px' }}>
                     {version.productVersionMin || '8.0.0'} - {version.productVersionMax || '9.17.5'}
@@ -791,11 +803,11 @@ export const VersionModal: React.FC<VersionModalProps> = ({ version, onClose, on
                           gap: '8px',
                           marginBottom: '12px',
                           padding: '12px 16px',
-                          background: 'linear-gradient(135deg, rgba(0, 82, 204, 0.08), rgba(0, 101, 255, 0.12))',
+                          background: 'linear-gradient(135deg, rgba(102, 126, 234, 0.08), rgba(118, 75, 162, 0.12))',
                           borderRadius: '8px',
                           borderLeft: '4px solid var(--color-primary)'
                         }}>
-                          <span style={{ fontSize: '20px' }}>{getSectionIcon(section.type)}</span>
+                          {getSectionIcon(section.type)}
                           <h3 style={{
                             margin: 0,
                             fontSize: '16px',
@@ -848,7 +860,7 @@ export const VersionModal: React.FC<VersionModalProps> = ({ version, onClose, on
                 )
               ) : version.changelogUrl ? (
                 <div style={{ textAlign: 'center', padding: '40px 20px' }}>
-                  <div style={{ fontSize: '48px', marginBottom: '16px' }}>📄</div>
+                  <div style={{ fontSize: '48px', marginBottom: '16px', display: 'flex', justifyContent: 'center' }}><FileText size={48} /></div>
                   <div style={{ fontSize: '16px', color: 'var(--color-text-secondary)', marginBottom: '20px' }}>
                     View the full changelog on Atlassian Marketplace
                   </div>
@@ -897,7 +909,7 @@ export const VersionModal: React.FC<VersionModalProps> = ({ version, onClose, on
 
                     const bgColor = note.type === 'security' ? 'rgba(222, 53, 11, 0.05)' :
                                    note.type === 'bugfix' ? 'rgba(255, 171, 0, 0.05)' :
-                                   note.type === 'feature' ? 'rgba(0, 82, 204, 0.05)' :
+                                   note.type === 'feature' ? 'rgba(102, 126, 234, 0.05)' :
                                    'transparent';
 
                     return (
@@ -957,7 +969,7 @@ export const VersionModal: React.FC<VersionModalProps> = ({ version, onClose, on
               fontSize: '14px',
               fontStyle: 'italic'
             }}>
-              <div style={{ fontSize: '48px', marginBottom: '12px', opacity: 0.5 }}>📭</div>
+              <div style={{ fontSize: '48px', marginBottom: '12px', opacity: 0.5, display: 'flex', justifyContent: 'center' }}><InboxIcon size={48} /></div>
               No additional information available for this version
             </div>
           )}

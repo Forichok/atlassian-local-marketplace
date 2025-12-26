@@ -1,21 +1,40 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { useToast } from '../components/Toast';
+import { ThemeToggle } from '../components/ThemeToggle';
+import '../styles/login.css';
 
 export const Login: React.FC = () => {
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
+  const [mousePosition, setMousePosition] = useState({ x: 0, y: 0 });
   const { login, isAuthenticated } = useAuth();
   const { showToast } = useToast();
   const navigate = useNavigate();
+  const containerRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     if (isAuthenticated) {
       navigate('/admin');
     }
   }, [isAuthenticated, navigate]);
+
+  useEffect(() => {
+    const handleMouseMove = (e: MouseEvent) => {
+      if (containerRef.current) {
+        const rect = containerRef.current.getBoundingClientRect();
+        setMousePosition({
+          x: (e.clientX - rect.left) / rect.width,
+          y: (e.clientY - rect.top) / rect.height,
+        });
+      }
+    };
+
+    window.addEventListener('mousemove', handleMouseMove);
+    return () => window.removeEventListener('mousemove', handleMouseMove);
+  }, []);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -33,113 +52,101 @@ export const Login: React.FC = () => {
   };
 
   return (
-    <div style={{
-      display: 'flex',
-      alignItems: 'center',
-      justifyContent: 'center',
-      minHeight: '100vh',
-      background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-    }}>
-      <div className="card" style={{
-        width: '100%',
-        maxWidth: '400px',
-        padding: 'var(--space-2xl)',
-      }}>
-        <h1 style={{
-          fontSize: '32px',
-          fontWeight: 800,
-          background: 'var(--gradient-jira)',
-          WebkitBackgroundClip: 'text',
-          WebkitTextFillColor: 'transparent',
-          backgroundClip: 'text',
-          marginBottom: 'var(--space-md)',
-          textAlign: 'center',
-        }}>
-          DC PluginX
-        </h1>
-        <p style={{
-          fontSize: '14px',
-          color: 'var(--color-text-secondary)',
-          textAlign: 'center',
-          marginBottom: 'var(--space-2xl)',
-        }}>
-          Sign in to access admin panel
-        </p>
+    <div className="login">
+      <div className="login-theme-toggle">
+        <ThemeToggle />
+      </div>
 
-        <form onSubmit={handleSubmit}>
-          <div style={{ marginBottom: 'var(--space-lg)' }}>
-            <label style={{
-              display: 'block',
-              fontSize: '14px',
-              fontWeight: 600,
-              marginBottom: 'var(--space-xs)',
-              color: 'var(--color-text-primary)',
-            }}>
-              Username
-            </label>
-            <input
-              type="text"
-              value={username}
-              onChange={(e) => setUsername(e.target.value)}
-              required
-              autoFocus
-              style={{
-                width: '100%',
-                padding: 'var(--space-md)',
-                fontSize: '14px',
-                border: '2px solid rgba(0, 0, 0, 0.1)',
-                borderRadius: 'var(--radius-md)',
-                outline: 'none',
-                transition: 'border-color 0.2s',
-              }}
-              onFocus={(e) => e.target.style.borderColor = 'var(--color-primary)'}
-              onBlur={(e) => e.target.style.borderColor = 'rgba(0, 0, 0, 0.1)'}
-            />
+      <div className="login-orbs">
+        <div
+          className="login-orb login-orb-1"
+          style={{
+            transform: `translate(${mousePosition.x * 30}px, ${mousePosition.y * 30}px)`
+          }}
+        />
+        <div
+          className="login-orb login-orb-2"
+          style={{
+            transform: `translate(${mousePosition.x * -20}px, ${mousePosition.y * -20}px)`
+          }}
+        />
+        <div
+          className="login-orb login-orb-3"
+          style={{
+            transform: `translate(${mousePosition.x * 15}px, ${mousePosition.y * -15}px)`
+          }}
+        />
+      </div>
+
+      <div className="login-container" ref={containerRef}>
+        <div className="login-content">
+          <div className="login-card">
+            <div className="login-card-glow"></div>
+
+            <div className="login-header">
+              <div className="login-badge">
+                <span className="login-badge-pulse"></span>
+                <span className="login-badge-text">Secure Access</span>
+              </div>
+
+              <h1 className="login-title">DC PluginX</h1>
+              <p className="login-subtitle">Sign in to access admin panel</p>
+            </div>
+
+            <form onSubmit={handleSubmit} className="login-form">
+              <div className="login-form-group">
+                <label className="login-label">Username</label>
+                <input
+                  type="text"
+                  className="login-input"
+                  value={username}
+                  onChange={(e) => setUsername(e.target.value)}
+                  placeholder="Enter your username"
+                  required
+                  autoFocus
+                />
+              </div>
+
+              <div className="login-form-group">
+                <label className="login-label">Password</label>
+                <input
+                  type="password"
+                  className="login-input"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  placeholder="Enter your password"
+                  required
+                />
+              </div>
+
+              <button
+                type="submit"
+                className="login-button"
+                disabled={loading}
+              >
+                <span className="login-button-text">
+                  {loading ? 'Signing in...' : 'Sign In'}
+                </span>
+                <span className="login-button-shine"></span>
+              </button>
+            </form>
+
+            <div className="login-footer">
+              <div className="login-footer-badge">
+                <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
+                  <path d="M8 1L3 6V11L8 15L13 11V6L8 1Z"/>
+                </svg>
+                <span>Self-Hosted</span>
+              </div>
+              <div className="login-footer-badge">
+                <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
+                  <path d="M8 0L10 6H16L11 10L13 16L8 12L3 16L5 10L0 6H6L8 0Z"/>
+                </svg>
+                <span>Enterprise Security</span>
+              </div>
+            </div>
           </div>
-
-          <div style={{ marginBottom: 'var(--space-xl)' }}>
-            <label style={{
-              display: 'block',
-              fontSize: '14px',
-              fontWeight: 600,
-              marginBottom: 'var(--space-xs)',
-              color: 'var(--color-text-primary)',
-            }}>
-              Password
-            </label>
-            <input
-              type="password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              required
-              style={{
-                width: '100%',
-                padding: 'var(--space-md)',
-                fontSize: '14px',
-                border: '2px solid rgba(0, 0, 0, 0.1)',
-                borderRadius: 'var(--radius-md)',
-                outline: 'none',
-                transition: 'border-color 0.2s',
-              }}
-              onFocus={(e) => e.target.style.borderColor = 'var(--color-primary)'}
-              onBlur={(e) => e.target.style.borderColor = 'rgba(0, 0, 0, 0.1)'}
-            />
-          </div>
-
-          <button
-            type="submit"
-            disabled={loading}
-            className="button"
-            style={{
-              width: '100%',
-              padding: 'var(--space-md)',
-              fontSize: '16px',
-              fontWeight: 600,
-            }}
-          >
-            {loading ? 'Signing in...' : 'Sign In'}
-          </button>
-        </form>
+        </div>
       </div>
     </div>
   );

@@ -1,12 +1,12 @@
 # DC PluginX
 
-**Local Atlassian Marketplace Knowledge Base for Jira Data Center Plugins**
+**Local Atlassian Marketplace Knowledge Base for Atlassian Data Center Plugins**
 
-DC PluginX is a complete, production-ready system for synchronizing, storing, and managing Jira Data Center plugins from the Atlassian Marketplace. It provides full metadata ingestion, version history storage, local JAR storage, and a web UI for browsing and downloading plugins.
+DC PluginX is a complete, production-ready system for synchronizing, storing, and managing Atlassian Data Center plugins from the Atlassian Marketplace. It provides full metadata ingestion, version history storage, local JAR storage, and a web UI for browsing and downloading plugins.
 
 ## Features
 
-- **Complete Metadata Ingestion**: Fetches all Jira Data Center plugins from Atlassian Marketplace
+- **Complete Metadata Ingestion**: Fetches all Atlassian Data Center plugins from Atlassian Marketplace
 - **Version History**: Parses and stores complete version history including release notes
 - **Local JAR Storage**: Downloads and stores plugin JAR files locally
 - **Resumable Sync**: All sync operations are resumable and fault-tolerant
@@ -434,4 +434,4 @@ For issues and questions:
 
 - Built for synchronizing Atlassian Marketplace data
 - Uses public Atlassian Marketplace APIs
-- Designed for Jira Data Center plugin management
+- Designed for Atlassian Data Center plugin management
