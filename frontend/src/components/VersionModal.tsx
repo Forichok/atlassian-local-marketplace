@@ -276,7 +276,7 @@ export const VersionModal: React.FC<VersionModalProps> = ({ version, onClose, on
           background: none;
           border: none;
           border-bottom: 2px solid transparent;
-          color: #6b778c;
+          color: var(--color-text-secondary);
           font-size: 14px;
           font-weight: 600;
           cursor: pointer;
@@ -284,12 +284,12 @@ export const VersionModal: React.FC<VersionModalProps> = ({ version, onClose, on
           font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Segoe UI', sans-serif;
         }
         .version-modal-tab:hover {
-          color: #0052cc;
-          background: rgba(0, 82, 204, 0.05);
+          color: var(--color-primary);
+          background: var(--color-bg-tertiary);
         }
         .version-modal-tab.active {
-          color: #0052cc;
-          border-bottom-color: #0052cc;
+          color: var(--color-primary);
+          border-bottom-color: var(--color-primary);
         }
         .version-info-grid {
           display: grid;
@@ -332,13 +332,13 @@ export const VersionModal: React.FC<VersionModalProps> = ({ version, onClose, on
           font-weight: 700;
           text-transform: uppercase;
           letter-spacing: 0.8px;
-          color: #5e6c84;
+          color: var(--color-text-secondary);
           margin-bottom: 8px;
         }
         .version-info-value {
           font-size: 18px;
           font-weight: 700;
-          color: #172b4d;
+          color: var(--color-text-primary);
           word-break: break-all;
         }
         .compatibility-bar {
@@ -378,19 +378,19 @@ export const VersionModal: React.FC<VersionModalProps> = ({ version, onClose, on
           cursor: pointer;
           font-size: 11px;
           font-weight: 600;
-          color: #0052cc;
+          color: var(--color-primary);
           transition: all 0.2s;
         }
         .copy-button:hover {
-          background: #0052cc;
+          background: var(--color-primary);
           color: white;
           transform: scale(1.05);
         }
         .content-section {
-          background: #f8f9fa;
+          background: var(--color-bg-secondary);
           border-radius: 12px;
           padding: 20px;
-          border: 1px solid rgba(0, 0, 0, 0.08);
+          border: 1px solid var(--border-color);
         }
         .highlight-box {
           background: linear-gradient(135deg, rgba(0, 168, 112, 0.08), rgba(87, 217, 163, 0.12));
@@ -403,14 +403,14 @@ export const VersionModal: React.FC<VersionModalProps> = ({ version, onClose, on
           margin: 0 0 12px 0;
           font-size: 14px;
           font-weight: 700;
-          color: #00875a;
+          color: var(--color-success);
           display: flex;
           align-items: center;
           gap: 8px;
         }
         .highlight-item {
           font-size: 14px;
-          color: #172b4d;
+          color: var(--color-text-primary);
           line-height: 1.6;
           margin-bottom: 8px;
           padding-left: 20px;
@@ -420,7 +420,7 @@ export const VersionModal: React.FC<VersionModalProps> = ({ version, onClose, on
           content: '✓';
           position: absolute;
           left: 0;
-          color: #00875a;
+          color: var(--color-success);
           font-weight: bold;
         }
         .deprecated-banner {
@@ -442,13 +442,13 @@ export const VersionModal: React.FC<VersionModalProps> = ({ version, onClose, on
 
       <div
         style={{
-          backgroundColor: 'white',
+          backgroundColor: 'var(--color-bg-primary)',
           borderRadius: '16px',
           maxWidth: '900px',
           width: '100%',
           maxHeight: '90vh',
           overflow: 'hidden',
-          boxShadow: '0 24px 48px rgba(0, 0, 0, 0.2), 0 12px 24px rgba(0, 0, 0, 0.15)',
+          boxShadow: 'var(--shadow-2xl)',
           animation: 'slideUp 0.3s cubic-bezier(0.16, 1, 0.3, 1)',
           display: 'flex',
           flexDirection: 'column',
@@ -629,11 +629,11 @@ export const VersionModal: React.FC<VersionModalProps> = ({ version, onClose, on
 
         {/* Tabs */}
         <div style={{
-          borderBottom: '1px solid rgba(0, 0, 0, 0.08)',
+          borderBottom: '1px solid var(--border-color)',
           display: 'flex',
           gap: '8px',
           padding: '0 24px',
-          background: '#fafbfc',
+          background: 'var(--color-bg-secondary)',
           justifyContent: 'space-between',
           alignItems: 'center'
         }}>
@@ -666,7 +666,7 @@ export const VersionModal: React.FC<VersionModalProps> = ({ version, onClose, on
           </div>
           <div style={{
             fontSize: '11px',
-            color: '#8993a4',
+            color: 'var(--color-text-tertiary)',
             padding: '8px 12px',
             display: 'flex',
             gap: '12px'
@@ -689,10 +689,10 @@ export const VersionModal: React.FC<VersionModalProps> = ({ version, onClose, on
             <div className="deprecated-banner">
               <span style={{ fontSize: '24px' }}>⚠️</span>
               <div>
-                <div style={{ fontWeight: 700, color: '#bf2600', marginBottom: '4px' }}>
+                <div style={{ fontWeight: 700, color: 'var(--color-danger)', marginBottom: '4px' }}>
                   Deprecated Version
                 </div>
-                <div style={{ fontSize: '13px', color: '#5e6c84' }}>
+                <div style={{ fontSize: '13px', color: 'var(--color-text-secondary)' }}>
                   This version is no longer recommended for use
                 </div>
               </div>
@@ -767,7 +767,7 @@ export const VersionModal: React.FC<VersionModalProps> = ({ version, onClose, on
                   </div>
                   <div style={{
                     fontSize: '12px',
-                    color: '#5e6c84',
+                    color: 'var(--color-text-secondary)',
                     marginTop: '6px',
                     fontWeight: 600
                   }}>
@@ -793,14 +793,14 @@ export const VersionModal: React.FC<VersionModalProps> = ({ version, onClose, on
                           padding: '12px 16px',
                           background: 'linear-gradient(135deg, rgba(0, 82, 204, 0.08), rgba(0, 101, 255, 0.12))',
                           borderRadius: '8px',
-                          borderLeft: '4px solid #0052cc'
+                          borderLeft: '4px solid var(--color-primary)'
                         }}>
                           <span style={{ fontSize: '20px' }}>{getSectionIcon(section.type)}</span>
                           <h3 style={{
                             margin: 0,
                             fontSize: '16px',
                             fontWeight: 700,
-                            color: '#0052cc'
+                            color: 'var(--color-primary)'
                           }}>
                             {section.type}
                           </h3>
@@ -816,13 +816,13 @@ export const VersionModal: React.FC<VersionModalProps> = ({ version, onClose, on
                               position: 'relative',
                               fontSize: '14px',
                               lineHeight: '1.6',
-                              color: '#172b4d',
-                              borderBottom: itemIdx < section.items.length - 1 ? '1px solid rgba(0, 0, 0, 0.06)' : 'none'
+                              color: 'var(--color-text-primary)',
+                              borderBottom: itemIdx < section.items.length - 1 ? '1px solid var(--border-color)' : 'none'
                             }}>
                               <span style={{
                                 position: 'absolute',
                                 left: '16px',
-                                color: '#0052cc',
+                                color: 'var(--color-primary)',
                                 fontWeight: 'bold'
                               }}>
                                 •
@@ -838,7 +838,7 @@ export const VersionModal: React.FC<VersionModalProps> = ({ version, onClose, on
                   <div style={{
                     fontSize: '14px',
                     lineHeight: '1.8',
-                    color: '#172b4d',
+                    color: 'var(--color-text-primary)',
                     whiteSpace: 'pre-wrap',
                     wordBreak: 'break-word',
                     fontFamily: 'var(--font-mono)',
@@ -849,7 +849,7 @@ export const VersionModal: React.FC<VersionModalProps> = ({ version, onClose, on
               ) : version.changelogUrl ? (
                 <div style={{ textAlign: 'center', padding: '40px 20px' }}>
                   <div style={{ fontSize: '48px', marginBottom: '16px' }}>📄</div>
-                  <div style={{ fontSize: '16px', color: '#5e6c84', marginBottom: '20px' }}>
+                  <div style={{ fontSize: '16px', color: 'var(--color-text-secondary)', marginBottom: '20px' }}>
                     View the full changelog on Atlassian Marketplace
                   </div>
                   <a
@@ -880,14 +880,14 @@ export const VersionModal: React.FC<VersionModalProps> = ({ version, onClose, on
                           padding: '12px 16px',
                           background: 'linear-gradient(135deg, rgba(0, 168, 112, 0.08), rgba(87, 217, 163, 0.12))',
                           borderRadius: '8px',
-                          borderLeft: '4px solid #00875a'
+                          borderLeft: '4px solid var(--color-success)'
                         }}>
                           <span style={{ fontSize: '24px' }}>{note.icon}</span>
                           <h3 style={{
                             margin: 0,
                             fontSize: '18px',
                             fontWeight: 700,
-                            color: '#00875a'
+                            color: 'var(--color-success)'
                           }}>
                             {note.content}
                           </h3>
@@ -906,7 +906,7 @@ export const VersionModal: React.FC<VersionModalProps> = ({ version, onClose, on
                         position: 'relative',
                         fontSize: '14px',
                         lineHeight: '1.7',
-                        color: '#172b4d',
+                        color: 'var(--color-text-primary)',
                         marginBottom: '8px',
                         background: bgColor,
                         borderRadius: '6px',
@@ -925,12 +925,12 @@ export const VersionModal: React.FC<VersionModalProps> = ({ version, onClose, on
                   })}
 
                   {/* Original HTML below parsed highlights */}
-                  <div style={{ marginTop: '24px', paddingTop: '24px', borderTop: '2px solid rgba(0, 0, 0, 0.08)' }}>
+                  <div style={{ marginTop: '24px', paddingTop: '24px', borderTop: '2px solid var(--border-color)' }}>
                     <div
                       style={{
                         fontSize: '14px',
                         lineHeight: '1.8',
-                        color: '#172b4d',
+                        color: 'var(--color-text-primary)',
                       }}
                       dangerouslySetInnerHTML={{ __html: version.releaseNotes }}
                     />
@@ -941,7 +941,7 @@ export const VersionModal: React.FC<VersionModalProps> = ({ version, onClose, on
                   style={{
                     fontSize: '14px',
                     lineHeight: '1.8',
-                    color: '#172b4d',
+                    color: 'var(--color-text-primary)',
                   }}
                   dangerouslySetInnerHTML={{ __html: version.releaseNotes }}
                 />
@@ -953,7 +953,7 @@ export const VersionModal: React.FC<VersionModalProps> = ({ version, onClose, on
             <div style={{
               textAlign: 'center',
               padding: '40px 20px',
-              color: '#5e6c84',
+              color: 'var(--color-text-secondary)',
               fontSize: '14px',
               fontStyle: 'italic'
             }}>
@@ -967,14 +967,14 @@ export const VersionModal: React.FC<VersionModalProps> = ({ version, onClose, on
         <div
           style={{
             padding: '20px 32px',
-            borderTop: '1px solid rgba(0, 0, 0, 0.08)',
+            borderTop: '1px solid var(--border-color)',
             display: 'flex',
             justifyContent: 'space-between',
             alignItems: 'center',
-            background: '#fafbfc'
+            background: 'var(--color-bg-secondary)'
           }}
         >
-          <div style={{ fontSize: '13px', color: '#5e6c84' }}>
+          <div style={{ fontSize: '13px', color: 'var(--color-text-secondary)' }}>
             {version.releaseDate && (
               <>Released {new Date(version.releaseDate).toLocaleDateString()}</>
             )}

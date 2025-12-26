@@ -11,13 +11,13 @@ export const ProductSelector: React.FC<ProductSelectorProps> = ({ selected, onCh
   return (
     <div style={{
       display: 'inline-flex',
-      background: 'rgba(255, 255, 255, 0.9)',
+      background: 'var(--color-bg-primary)',
       backdropFilter: 'blur(10px)',
-      border: '1px solid rgba(0, 0, 0, 0.08)',
+      border: '1px solid var(--border-color)',
       borderRadius: '12px',
       padding: '4px',
       gap: '4px',
-      boxShadow: '0 2px 8px rgba(0, 0, 0, 0.04), 0 1px 3px rgba(0, 0, 0, 0.03)'
+      boxShadow: 'var(--shadow-sm)'
     }}>
       <button
         onClick={() => onChange('JIRA')}

@@ -53,31 +53,32 @@ export const CustomSelect: React.FC<CustomSelectProps> = ({
           width: '100%',
           padding: '12px 16px',
           paddingRight: '40px',
-          border: '1.5px solid rgba(0, 0, 0, 0.12)',
+          border: '1.5px solid var(--border-color)',
           borderRadius: '8px',
           fontSize: '14px',
           fontFamily: 'var(--font-sans)',
           fontWeight: 500,
-          background: 'white',
+          background: 'var(--color-bg-primary)',
           color: 'var(--color-text-primary)',
           cursor: 'pointer',
           transition: 'all var(--transition-base)',
-          boxShadow: '0 1px 2px rgba(0, 0, 0, 0.02)',
+          boxShadow: 'var(--shadow-xs)',
           textAlign: 'left',
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'space-between',
-          borderColor: isOpen ? 'var(--color-primary)' : 'rgba(0, 0, 0, 0.12)',
+          borderColor: isOpen ? 'var(--color-primary)' : 'var(--border-color)',
           position: 'relative'
         }}
         onMouseEnter={(e) => {
           if (!isOpen) {
-            e.currentTarget.style.borderColor = 'rgba(0, 82, 204, 0.4)';
+            e.currentTarget.style.borderColor = 'var(--border-hover)';
           }
         }}
         onMouseLeave={(e) => {
           if (!isOpen) {
-            e.currentTarget.style.borderColor = 'rgba(0, 0, 0, 0.12)';
+            const borderColor = getComputedStyle(document.documentElement).getPropertyValue('--border-color');
+            e.currentTarget.style.borderColor = borderColor;
           }
         }}
       >
@@ -104,10 +105,10 @@ export const CustomSelect: React.FC<CustomSelectProps> = ({
             top: 'calc(100% + 4px)',
             left: 0,
             right: 0,
-            background: 'white',
-            border: '1px solid rgba(0, 0, 0, 0.08)',
+            background: 'var(--color-bg-primary)',
+            border: '1px solid var(--border-color)',
             borderRadius: '12px',
-            boxShadow: '0 8px 24px rgba(0, 0, 0, 0.12), 0 4px 8px rgba(0, 0, 0, 0.08)',
+            boxShadow: 'var(--shadow-xl)',
             zIndex: 1000,
             overflow: 'hidden',
             animation: 'dropdownSlideIn 0.2s cubic-bezier(0.16, 1, 0.3, 1)',
@@ -125,7 +126,7 @@ export const CustomSelect: React.FC<CustomSelectProps> = ({
                   padding: '12px 16px',
                   cursor: 'pointer',
                   transition: 'all var(--transition-fast)',
-                  background: isSelected ? 'rgba(0, 82, 204, 0.08)' : 'transparent',
+                  background: isSelected ? 'var(--color-bg-secondary)' : 'transparent',
                   color: isSelected ? 'var(--color-primary)' : 'var(--color-text-primary)',
                   fontWeight: isSelected ? 700 : 500,
                   fontSize: '14px',
@@ -133,12 +134,12 @@ export const CustomSelect: React.FC<CustomSelectProps> = ({
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'space-between',
-                  borderTop: index === 0 ? 'none' : '1px solid rgba(0, 0, 0, 0.04)',
+                  borderTop: index === 0 ? 'none' : '1px solid var(--border-color)',
                   animation: `optionFadeIn 0.2s cubic-bezier(0.16, 1, 0.3, 1) ${index * 0.02}s backwards`
                 }}
                 onMouseEnter={(e) => {
                   if (!isSelected) {
-                    e.currentTarget.style.background = 'rgba(0, 82, 204, 0.05)';
+                    e.currentTarget.style.background = 'var(--color-bg-tertiary)';
                   }
                 }}
                 onMouseLeave={(e) => {

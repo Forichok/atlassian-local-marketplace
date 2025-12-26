@@ -1,6 +1,13 @@
 import React from 'react';
+import { useTheme } from '../contexts/ThemeContext';
 
 export const AuroraBackground: React.FC = () => {
+  const { theme } = useTheme();
+
+  const background = theme === 'dark'
+    ? 'linear-gradient(135deg, #0a0e27 0%, #1a1f3a 100%)'
+    : 'linear-gradient(135deg, #f5f6f7 0%, #e9ecef 100%)';
+
   return (
     <div style={{
       position: 'fixed',
@@ -10,8 +17,9 @@ export const AuroraBackground: React.FC = () => {
       height: '100%',
       zIndex: -1,
       overflow: 'hidden',
-      background: 'linear-gradient(135deg, #f5f6f7 0%, #e9ecef 100%)',
-      pointerEvents: 'none'
+      background,
+      pointerEvents: 'none',
+      transition: 'background 0.3s ease'
     }}>
       <style>{`
         @keyframes aurora1 {

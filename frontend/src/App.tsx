@@ -8,6 +8,7 @@ import {
   useLocation,
   useNavigate,
 } from "react-router-dom";
+import { Home } from "./pages/Home";
 import { Admin } from "./pages/Admin";
 import { Plugins } from "./pages/Plugins";
 import { PluginDetail } from "./pages/PluginDetail";
@@ -16,6 +17,8 @@ import { ToastProvider } from "./components/Toast";
 import { ParticleBackground } from "./components/ParticleBackground";
 import { AuroraBackground } from "./components/AuroraBackground";
 import { AuthProvider, useAuth } from "./contexts/AuthContext";
+import { ThemeProvider } from "./contexts/ThemeContext";
+import { ThemeToggle } from "./components/ThemeToggle";
 import "./styles/global.css";
 
 const ProtectedRoute: React.FC<{ children: React.ReactNode }> = ({ children }) => {
@@ -33,69 +36,72 @@ const Navigation: React.FC = () => {
     navigate('/');
   };
 
-  if (location.pathname === '/login') {
+  if (location.pathname === '/login' || location.pathname === '/') {
     return null;
   }
 
   return (
     <div className="header">
         <div className="container">
-          <div>
-            <h1
-              style={{
-                display: "flex",
-                alignItems: "center",
-                gap: "8px",
-              }}
-            >
-              <svg
-                width="32"
-                height="32"
-                viewBox="0 0 32 32"
-                fill="none"
-                xmlns="http://www.w3.org/2000/svg"
-              >
-                <rect width="32" height="32" rx="8" fill="url(#gradient)" />
-                <path d="M16 8L12 16H16L14 24L22 14H18L20 8H16Z" fill="white" />
-                <defs>
-                  <linearGradient
-                    id="gradient"
-                    x1="0"
-                    y1="0"
-                    x2="32"
-                    y2="32"
-                    gradientUnits="userSpaceOnUse"
-                  >
-                    <stop stopColor="#0052cc" />
-                    <stop offset="1" stopColor="#0065ff" />
-                  </linearGradient>
-                </defs>
-              </svg>
-              <span
+          <Link to="/" style={{ textDecoration: 'none' }}>
+            <div>
+              <h1
                 style={{
-                  background: "linear-gradient(135deg, #0052cc, #0065ff)",
+                  display: "flex",
+                  alignItems: "center",
+                  gap: "8px",
+                }}
+              >
+                <svg
+                  width="32"
+                  height="32"
+                  viewBox="0 0 32 32"
+                  fill="none"
+                  xmlns="http://www.w3.org/2000/svg"
+                >
+                  <rect width="32" height="32" rx="8" fill="url(#gradient)" />
+                  <path d="M16 8L12 16H16L14 24L22 14H18L20 8H16Z" fill="white" />
+                  <defs>
+                    <linearGradient
+                      id="gradient"
+                      x1="0"
+                      y1="0"
+                      x2="32"
+                      y2="32"
+                      gradientUnits="userSpaceOnUse"
+                    >
+                      <stop stopColor="#0052cc" />
+                      <stop offset="1" stopColor="#0065ff" />
+                    </linearGradient>
+                  </defs>
+                </svg>
+                <span
+                  style={{
+                    background: "linear-gradient(135deg, #0052cc, #0065ff)",
+                    WebkitBackgroundClip: "text",
+                    WebkitTextFillColor: "transparent",
+                    backgroundClip: "text",
+                  }}
+                >
+                  DC PluginX
+                </span>
+              </h1>
+              <p
+                style={{
+                  background:
+                    "linear-gradient(90deg, rgba(0, 82, 204, 0.8), rgba(0, 101, 255, 0.6))",
                   WebkitBackgroundClip: "text",
                   WebkitTextFillColor: "transparent",
                   backgroundClip: "text",
+                  fontWeight: 600,
                 }}
               >
-                DC PluginX
-              </span>
-            </h1>
-            <p
-              style={{
-                background:
-                  "linear-gradient(90deg, rgba(0, 82, 204, 0.8), rgba(0, 101, 255, 0.6))",
-                WebkitBackgroundClip: "text",
-                WebkitTextFillColor: "transparent",
-                backgroundClip: "text",
-                fontWeight: 600,
-              }}
-            >
-              Local Jira Data Center Plugin Repository
-            </p>
-          </div>
+                Local Jira Data Center Plugin Repository
+              </p>
+            </div>
+          </Link>
           <nav className="nav">
+            <ThemeToggle />
             <Link
               to="/plugins"
               className={location.pathname.startsWith("/plugins") ? "active" : ""}
@@ -130,27 +136,29 @@ const Navigation: React.FC = () => {
 const App: React.FC = () => {
   return (
     <BrowserRouter>
-      <AuthProvider>
-        <ToastProvider>
-          <AuroraBackground />
-          <ParticleBackground />
-          <Navigation />
-          <Routes>
-            <Route path="/login" element={<Login />} />
-            <Route path="/" element={<Navigate to="/plugins" replace />} />
-            <Route path="/plugins" element={<Plugins />} />
-            <Route path="/plugins/:addonKey" element={<PluginDetail />} />
-            <Route
-              path="/admin"
-              element={
-                <ProtectedRoute>
-                  <Admin />
-                </ProtectedRoute>
-              }
-            />
-          </Routes>
-        </ToastProvider>
-      </AuthProvider>
+      <ThemeProvider>
+        <AuthProvider>
+          <ToastProvider>
+            <AuroraBackground />
+            <ParticleBackground />
+            <Navigation />
+            <Routes>
+              <Route path="/login" element={<Login />} />
+              <Route path="/" element={<Home />} />
+              <Route path="/plugins" element={<Plugins />} />
+              <Route path="/plugins/:addonKey" element={<PluginDetail />} />
+              <Route
+                path="/admin"
+                element={
+                  <ProtectedRoute>
+                    <Admin />
+                  </ProtectedRoute>
+                }
+              />
+            </Routes>
+          </ToastProvider>
+        </AuthProvider>
+      </ThemeProvider>
     </BrowserRouter>
   );
 };
