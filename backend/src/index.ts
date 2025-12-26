@@ -3,6 +3,8 @@ import cors from 'cors';
 import { config } from './config';
 import syncRoutes from './api/sync.routes';
 import pluginsRoutes from './api/plugins.routes';
+import authRoutes from './api/auth.routes';
+import { authMiddleware } from './middleware/auth';
 import * as fs from 'fs';
 import * as path from 'path';
 
@@ -16,7 +18,8 @@ const app = express();
 app.use(cors());
 app.use(express.json());
 
-app.use('/api/sync', syncRoutes);
+app.use('/api/auth', authRoutes);
+app.use('/api/sync', authMiddleware, syncRoutes);
 app.use('/api/plugins', pluginsRoutes);
 
 app.get('/health', (req, res) => {

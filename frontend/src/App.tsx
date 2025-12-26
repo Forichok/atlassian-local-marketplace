@@ -10,13 +10,31 @@ import {
 import { Admin } from "./pages/Admin";
 import { Plugins } from "./pages/Plugins";
 import { PluginDetail } from "./pages/PluginDetail";
+import { Login } from "./pages/Login";
 import { ToastProvider } from "./components/Toast";
 import { ParticleBackground } from "./components/ParticleBackground";
 import { AuroraBackground } from "./components/AuroraBackground";
+import { AuthProvider, useAuth } from "./contexts/AuthContext";
 import "./styles/global.css";
+
+const ProtectedRoute: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+  const { isAuthenticated } = useAuth();
+  return isAuthenticated ? <>{children}</> : <Navigate to="/login" replace />;
+};
 
 const Navigation: React.FC = () => {
   const location = useLocation();
+  const { isAuthenticated, logout, user } = useAuth();
+  const navigate = useNavigate();
+
+  const handleLogout = () => {
+    logout();
+    navigate('/');
+  };
+
+  if (location.pathname === '/login') {
+    return null;
+  }
 
   return (
     <>
@@ -188,6 +206,19 @@ const Navigation: React.FC = () => {
             >
               ⚙️ Admin
             </Link>
+            {isAuthenticated && (
+              <button
+                onClick={handleLogout}
+                className="button secondary"
+                style={{
+                  padding: "10px 20px",
+                  fontSize: "14px",
+                  fontWeight: 600,
+                }}
+              >
+                👤 {user?.username} | Logout
+              </button>
+            )}
           </nav>
         </div>
       </div>
@@ -198,17 +229,27 @@ const Navigation: React.FC = () => {
 const App: React.FC = () => {
   return (
     <BrowserRouter>
-      <ToastProvider>
-        <AuroraBackground />
-        <ParticleBackground />
-        <Navigation />
-        <Routes>
-          <Route path="/" element={<Navigate to="/plugins" replace />} />
-          <Route path="/plugins" element={<Plugins />} />
-          <Route path="/plugins/:addonKey" element={<PluginDetail />} />
-          <Route path="/admin" element={<Admin />} />
-        </Routes>
-      </ToastProvider>
+      <AuthProvider>
+        <ToastProvider>
+          <AuroraBackground />
+          <ParticleBackground />
+          <Navigation />
+          <Routes>
+            <Route path="/login" element={<Login />} />
+            <Route path="/" element={<Navigate to="/plugins" replace />} />
+            <Route path="/plugins" element={<Plugins />} />
+            <Route path="/plugins/:addonKey" element={<PluginDetail />} />
+            <Route
+              path="/admin"
+              element={
+                <ProtectedRoute>
+                  <Admin />
+                </ProtectedRoute>
+              }
+            />
+          </Routes>
+        </ToastProvider>
+      </AuthProvider>
     </BrowserRouter>
   );
 };
