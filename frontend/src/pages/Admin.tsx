@@ -31,7 +31,7 @@ export const Admin: React.FC = () => {
 
   useEffect(() => {
     fetchStatus();
-    const interval = setInterval(fetchStatus, 3000);
+    const interval = setInterval(fetchStatus, 15000);
     return () => clearInterval(interval);
   }, [selectedProduct]);
 

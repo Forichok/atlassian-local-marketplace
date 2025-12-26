@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, memo } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { pluginsApi, ProductType } from '../api/client';
 import { Plugin } from '../types';
@@ -6,6 +6,67 @@ import { PluginCardSkeleton } from '../components/PluginCardSkeleton';
 import { EmptyState } from '../components/EmptyState';
 import { AnimatedNumber } from '../components/AnimatedNumber';
 import { ProductSelector } from '../components/ProductSelector';
+import { CustomSelect } from '../components/CustomSelect';
+
+const PluginCard = memo(({ plugin, productIcon, productName, jiraVersion, onClick }: {
+  plugin: Plugin;
+  productIcon: string;
+  productName: string;
+  jiraVersion?: number;
+  onClick: () => void;
+}) => {
+  return (
+  <div className="plugin-card" onClick={onClick}>
+    <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: 'var(--space-sm)' }}>
+      <h3 style={{ margin: 0, flex: 1 }}>{plugin.name}</h3>
+      <span style={{ fontSize: '20px', marginLeft: 'var(--space-sm)' }}>{productIcon}</span>
+    </div>
+    {plugin.vendor && <div className="vendor">by {plugin.vendor}</div>}
+    {plugin.summary && <div className="summary">{plugin.summary}</div>}
+    {plugin.supportedProductVersions && plugin.supportedProductVersions.length > 0 && (
+      <div style={{ display: 'flex', gap: '6px', marginTop: '8px', marginBottom: '8px', flexWrap: 'wrap' }}>
+        <span style={{ fontSize: '11px', color: 'var(--color-text-secondary)', fontWeight: 600, alignSelf: 'center' }}>
+          {productName}:
+        </span>
+        {plugin.supportedProductVersions.map(version => (
+          <span
+            key={version}
+            style={{
+              background: version === jiraVersion ? 'linear-gradient(135deg, #0052cc, #0065ff)' : 'rgba(0, 82, 204, 0.12)',
+              color: version === jiraVersion ? 'white' : '#0052cc',
+              padding: '3px 8px',
+              borderRadius: '4px',
+              fontSize: '11px',
+              fontWeight: 700,
+              border: version === jiraVersion ? '1px solid rgba(0, 82, 204, 0.3)' : '1px solid rgba(0, 82, 204, 0.2)',
+              boxShadow: version === jiraVersion ? '0 2px 8px rgba(0, 82, 204, 0.3)' : 'none'
+            }}
+          >
+            {version}
+          </span>
+        ))}
+      </div>
+    )}
+    <div style={{ fontSize: '13px', color: 'var(--color-text-tertiary)', fontWeight: 600, display: 'flex', gap: '12px', alignItems: 'center', flexWrap: 'wrap' }}>
+      <span style={{ background: 'rgba(0, 82, 204, 0.1)', padding: '4px 10px', borderRadius: '6px', display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
+        📦 <AnimatedNumber value={plugin._count?.versions || 0} decimals={0} /> versions
+      </span>
+      {plugin._count?.files && (
+        <span style={{ background: 'rgba(0, 135, 90, 0.1)', padding: '4px 10px', borderRadius: '6px', display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
+          📄 <AnimatedNumber value={plugin._count.files} decimals={0} /> files
+        </span>
+      )}
+      {plugin.totalSize && plugin.totalSize > 0 && (
+        <span style={{ background: 'rgba(0, 101, 255, 0.1)', padding: '4px 10px', borderRadius: '6px', display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
+          💾 <AnimatedNumber value={plugin.totalSize / 1024 / 1024} decimals={2} formatter={(v) => `${v.toFixed(2)} MB`} />
+        </span>
+      )}
+    </div>
+  </div>
+  );
+});
+
+PluginCard.displayName = 'PluginCard';
 
 export const Plugins: React.FC = () => {
   const navigate = useNavigate();
@@ -76,6 +137,22 @@ export const Plugins: React.FC = () => {
   const productIcon = selectedProduct === 'JIRA' ? '🔷' : '📘';
   const productName = selectedProduct === 'JIRA' ? 'Jira' : 'Confluence';
 
+  const versionOptions = selectedProduct === 'JIRA'
+    ? [
+        { value: '', label: 'All versions' },
+        { value: '8', label: 'Jira 8' },
+        { value: '9', label: 'Jira 9' },
+        { value: '10', label: 'Jira 10' },
+        { value: '11', label: 'Jira 11' },
+      ]
+    : [
+        { value: '', label: 'All versions' },
+        { value: '7.19', label: 'Confluence 7.19' },
+        { value: '8.5', label: 'Confluence 8.5' },
+        { value: '9.2', label: 'Confluence 9.2' },
+        { value: '10.2', label: 'Confluence 10.2' },
+      ];
+
   return (
     <div className="container">
       <div style={{
@@ -114,56 +191,24 @@ export const Plugins: React.FC = () => {
         />
       </div>
 
-      <form onSubmit={handleSearch} className="search-bar" style={{
-        background: 'rgba(255, 255, 255, 0.8)',
-        backdropFilter: 'blur(10px)',
-        border: '1px solid rgba(255, 255, 255, 0.9)',
-        boxShadow: '0 8px 32px rgba(0, 0, 0, 0.06)',
-        borderRadius: '16px',
-        padding: '8px'
-      }}>
+      <form onSubmit={handleSearch} className="search-bar">
         <input
           type="text"
           className="input"
           placeholder={`🔍 Search ${productName} plugins by name, key, or vendor...`}
           value={search}
           onChange={(e) => setSearch(e.target.value)}
-          style={{
-            background: 'transparent',
-            border: 'none'
-          }}
+          style={{ background: 'transparent', border: 'none' }}
         />
-        <select
-          className="select"
-          value={jiraVersion ?? ''}
-          onChange={(e) => {
-            const value = e.target.value ? parseFloat(e.target.value) : undefined;
-            setJiraVersion(value);
+        <CustomSelect
+          options={versionOptions}
+          value={jiraVersion?.toString() ?? ''}
+          onChange={(value) => {
+            const parsedValue = value ? parseFloat(value) : undefined;
+            setJiraVersion(parsedValue);
             setPage(1);
           }}
-          style={{
-            background: 'rgba(0, 82, 204, 0.05)',
-            border: '1px solid rgba(0, 82, 204, 0.1)',
-            backdropFilter: 'blur(5px)'
-          }}
-        >
-          <option value="">All versions</option>
-          {selectedProduct === 'JIRA' ? (
-            <>
-              <option value={8}>Jira 8</option>
-              <option value={9}>Jira 9</option>
-              <option value={10}>Jira 10</option>
-              <option value={11}>Jira 11</option>
-            </>
-          ) : (
-            <>
-              <option value={7.19}>Confluence 7.19</option>
-              <option value={8.5}>Confluence 8.5</option>
-              <option value={9.2}>Confluence 9.2</option>
-              <option value={10.2}>Confluence 10.2</option>
-            </>
-          )}
-        </select>
+        />
       </form>
 
       {loading ? (
@@ -176,218 +221,28 @@ export const Plugins: React.FC = () => {
         />
       ) : (
         <>
-          <div style={{
-            display: 'grid',
-            gap: 'var(--space-md)'
-          }}>
-            {plugins.map((plugin, index) => (
-              <div
+          <div style={{ display: 'grid', gap: 'var(--space-md)' }}>
+            {plugins.map((plugin) => (
+              <PluginCard
                 key={plugin.id}
-                className="plugin-card"
+                plugin={plugin}
+                productIcon={productIcon}
+                productName={productName}
+                jiraVersion={jiraVersion}
                 onClick={() => navigate(`/plugins/${plugin.addonKey}?productType=${selectedProduct}`)}
-                style={{
-                  animationDelay: `${index * 0.05}s`,
-                  position: 'relative',
-                  background: 'rgba(255, 255, 255, 0.7)',
-                  backdropFilter: 'blur(10px)',
-                  border: '1px solid rgba(255, 255, 255, 0.8)',
-                  boxShadow: '0 8px 32px rgba(0, 0, 0, 0.08)',
-                  overflow: 'hidden',
-                  transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)'
-                }}
-                onMouseEnter={(e) => {
-                  e.currentTarget.style.transform = 'translateY(-4px)';
-                  e.currentTarget.style.boxShadow = '0 16px 48px rgba(0, 82, 204, 0.15)';
-                  e.currentTarget.style.borderColor = 'rgba(0, 82, 204, 0.3)';
-                }}
-                onMouseLeave={(e) => {
-                  e.currentTarget.style.transform = 'translateY(0)';
-                  e.currentTarget.style.boxShadow = '0 8px 32px rgba(0, 0, 0, 0.08)';
-                  e.currentTarget.style.borderColor = 'rgba(255, 255, 255, 0.8)';
-                }}
-              >
-                <div style={{
-                  position: 'absolute',
-                  top: '-50px',
-                  right: '-50px',
-                  width: '150px',
-                  height: '150px',
-                  background: 'radial-gradient(circle, rgba(0, 82, 204, 0.1) 0%, transparent 70%)',
-                  borderRadius: '50%',
-                  pointerEvents: 'none'
-                }} />
-
-                <div style={{
-                  position: 'absolute',
-                  top: 0,
-                  left: '-100%',
-                  width: '100%',
-                  height: '100%',
-                  background: 'linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.4), transparent)',
-                  transition: 'left 0.5s',
-                  pointerEvents: 'none'
-                }} className="shine-effect" />
-
-                <div style={{
-                  display: 'flex',
-                  alignItems: 'flex-start',
-                  justifyContent: 'space-between',
-                  marginBottom: 'var(--space-sm)',
-                  position: 'relative',
-                  zIndex: 1
-                }}>
-                  <h3 style={{ margin: 0, flex: 1 }}>{plugin.name}</h3>
-                  <span style={{
-                    fontSize: '20px',
-                    marginLeft: 'var(--space-sm)'
-                  }}>
-                    {productIcon}
-                  </span>
-                </div>
-
-                {plugin.vendor && <div className="vendor" style={{ position: 'relative', zIndex: 1 }}>by {plugin.vendor}</div>}
-                {plugin.summary && <div className="summary" style={{ position: 'relative', zIndex: 1 }}>{plugin.summary}</div>}
-
-                {plugin.supportedProductVersions && plugin.supportedProductVersions.length > 0 && (
-                  <div style={{
-                    display: 'flex',
-                    gap: '6px',
-                    marginTop: '8px',
-                    marginBottom: '8px',
-                    position: 'relative',
-                    zIndex: 1,
-                    flexWrap: 'wrap'
-                  }}>
-                    <span style={{
-                      fontSize: '11px',
-                      color: 'var(--color-text-secondary)',
-                      fontWeight: 600,
-                      alignSelf: 'center'
-                    }}>
-                      {productName}:
-                    </span>
-                    {plugin.supportedProductVersions.map(version => (
-                      <span
-                        key={version}
-                        style={{
-                          background: version === jiraVersion
-                            ? 'linear-gradient(135deg, #0052cc, #0065ff)'
-                            : 'rgba(0, 82, 204, 0.12)',
-                          color: version === jiraVersion ? 'white' : '#0052cc',
-                          padding: '3px 8px',
-                          borderRadius: '4px',
-                          fontSize: '11px',
-                          fontWeight: 700,
-                          border: version === jiraVersion
-                            ? '1px solid rgba(0, 82, 204, 0.3)'
-                            : '1px solid rgba(0, 82, 204, 0.2)',
-                          boxShadow: version === jiraVersion
-                            ? '0 2px 8px rgba(0, 82, 204, 0.3)'
-                            : 'none',
-                          transition: 'all 0.2s'
-                        }}
-                      >
-                        {version}
-                      </span>
-                    ))}
-                  </div>
-                )}
-
-                <div style={{
-                  fontSize: '13px',
-                  color: 'var(--color-text-tertiary)',
-                  fontWeight: 600,
-                  display: 'flex',
-                  gap: '12px',
-                  alignItems: 'center',
-                  flexWrap: 'wrap',
-                  position: 'relative',
-                  zIndex: 1
-                }}>
-                  <span style={{
-                    background: 'rgba(0, 82, 204, 0.1)',
-                    padding: '4px 10px',
-                    borderRadius: '6px',
-                    display: 'inline-flex',
-                    alignItems: 'center',
-                    gap: '4px'
-                  }}>
-                    📦 <AnimatedNumber value={plugin._count?.versions || 0} decimals={0} /> versions
-                  </span>
-                  {plugin._count?.files && (
-                    <span style={{
-                      background: 'rgba(0, 135, 90, 0.1)',
-                      padding: '4px 10px',
-                      borderRadius: '6px',
-                      display: 'inline-flex',
-                      alignItems: 'center',
-                      gap: '4px'
-                    }}>
-                      📄 <AnimatedNumber value={plugin._count.files} decimals={0} /> files
-                    </span>
-                  )}
-                  {plugin.totalSize && plugin.totalSize > 0 && (
-                    <span style={{
-                      background: 'rgba(0, 101, 255, 0.1)',
-                      padding: '4px 10px',
-                      borderRadius: '6px',
-                      display: 'inline-flex',
-                      alignItems: 'center',
-                      gap: '4px'
-                    }}>
-                      💾 <AnimatedNumber
-                        value={plugin.totalSize / 1024 / 1024}
-                        decimals={2}
-                        formatter={(v) => `${v.toFixed(2)} MB`}
-                      />
-                    </span>
-                  )}
-                </div>
-              </div>
+              />
             ))}
           </div>
 
           {totalPages > 1 && (
-            <div className="pagination" style={{
-              background: 'rgba(255, 255, 255, 0.8)',
-              backdropFilter: 'blur(10px)',
-              border: '1px solid rgba(255, 255, 255, 0.9)',
-              boxShadow: '0 8px 32px rgba(0, 0, 0, 0.06)',
-              borderRadius: '16px',
-              padding: '20px'
-            }}>
-              <button
-                className="button secondary"
-                disabled={page === 1}
-                onClick={() => setPage(page - 1)}
-                style={{
-                  background: page === 1 ? 'rgba(0, 0, 0, 0.05)' : 'rgba(0, 82, 204, 0.08)',
-                  backdropFilter: 'blur(5px)',
-                  border: '1px solid rgba(0, 82, 204, 0.15)'
-                }}
-              >
+            <div className="pagination" style={{ background: 'white', border: '1px solid rgba(0, 0, 0, 0.08)', boxShadow: '0 1px 3px rgba(0, 0, 0, 0.04)', borderRadius: '12px', padding: '20px' }}>
+              <button className="button secondary" disabled={page === 1} onClick={() => setPage(page - 1)}>
                 ← Previous
               </button>
-              <span style={{
-                background: 'linear-gradient(135deg, rgba(0, 82, 204, 0.1), rgba(0, 101, 255, 0.15))',
-                padding: '10px 20px',
-                borderRadius: '10px',
-                fontWeight: 600,
-                backdropFilter: 'blur(5px)',
-                border: '1px solid rgba(0, 82, 204, 0.2)'
-              }}>
+              <span style={{ background: 'rgba(0, 82, 204, 0.08)', padding: '10px 20px', borderRadius: '10px', fontWeight: 600, border: '1px solid rgba(0, 82, 204, 0.15)' }}>
                 Page <AnimatedNumber value={page} decimals={0} /> of {totalPages}
               </span>
-              <button
-                className="button secondary"
-                disabled={page === totalPages}
-                onClick={() => setPage(page + 1)}
-                style={{
-                  background: page === totalPages ? 'rgba(0, 0, 0, 0.05)' : 'rgba(0, 82, 204, 0.08)',
-                  backdropFilter: 'blur(5px)',
-                  border: '1px solid rgba(0, 82, 204, 0.15)'
-                }}
-              >
+              <button className="button secondary" disabled={page === totalPages} onClick={() => setPage(page + 1)}>
                 Next →
               </button>
             </div>

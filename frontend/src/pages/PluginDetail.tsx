@@ -7,6 +7,7 @@ import { useToast } from '../components/Toast';
 import { Loading } from '../components/Loading';
 import { AnimatedNumber } from '../components/AnimatedNumber';
 import { NeonButton } from '../components/NeonButton';
+import { CustomSelect } from '../components/CustomSelect';
 
 export const PluginDetail: React.FC = () => {
   const { addonKey } = useParams<{ addonKey: string }>();
@@ -133,6 +134,21 @@ export const PluginDetail: React.FC = () => {
 
     return Array.from(supportedVersions).sort();
   }, [plugin?.versions, productType]);
+
+  const versionFilterOptions = productType === 'CONFLUENCE'
+    ? [
+        { value: '', label: 'All versions' },
+        { value: '7', label: 'Confluence 7' },
+        { value: '8', label: 'Confluence 8' },
+        { value: '9', label: 'Confluence 9' },
+      ]
+    : [
+        { value: '', label: 'All versions' },
+        { value: '8', label: 'Jira 8' },
+        { value: '9', label: 'Jira 9' },
+        { value: '10', label: 'Jira 10' },
+        { value: '11', label: 'Jira 11' },
+      ];
 
   if (loading) {
     return (
@@ -336,39 +352,17 @@ export const PluginDetail: React.FC = () => {
             border: '1px solid rgba(0, 82, 204, 0.1)',
             display: 'flex',
             alignItems: 'center',
-            gap: '8px'
+            gap: '12px'
           }}>
-            <label style={{ marginRight: '8px', fontSize: '14px', fontWeight: 600 }}>Filter by {productName}:</label>
-            <select
-              className="select"
-              value={productVersion ?? ''}
-              onChange={(e) => {
-                const value = e.target.value ? parseInt(e.target.value, 10) : undefined;
-                setProductVersion(value);
+            <label style={{ fontSize: '14px', fontWeight: 600, whiteSpace: 'nowrap' }}>Filter by {productName}:</label>
+            <CustomSelect
+              options={versionFilterOptions}
+              value={productVersion?.toString() ?? ''}
+              onChange={(value) => {
+                const parsedValue = value ? parseInt(value, 10) : undefined;
+                setProductVersion(parsedValue);
               }}
-              style={{
-                background: 'rgba(255, 255, 255, 0.8)',
-                backdropFilter: 'blur(5px)',
-                border: '1px solid rgba(0, 82, 204, 0.2)',
-                borderRadius: '6px'
-              }}
-            >
-              <option value="">All versions</option>
-              {productType === 'CONFLUENCE' ? (
-                <>
-                  <option value={7}>Confluence 7</option>
-                  <option value={8}>Confluence 8</option>
-                  <option value={9}>Confluence 9</option>
-                </>
-              ) : (
-                <>
-                  <option value={8}>Jira 8</option>
-                  <option value={9}>Jira 9</option>
-                  <option value={10}>Jira 10</option>
-                  <option value={11}>Jira 11</option>
-                </>
-              )}
-            </select>
+            />
           </div>
         </div>
 
