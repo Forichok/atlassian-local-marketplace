@@ -4,6 +4,8 @@
 
 DC PluginX is a complete, production-ready system for synchronizing, storing, and managing Atlassian Data Center plugins from the Atlassian Marketplace. It provides full metadata ingestion, version history storage, local JAR storage, and a web UI for browsing and downloading plugins.
 
+![Home Page](image/home-page.png)
+
 ## Features
 
 - **Complete Metadata Ingestion**: Fetches all Atlassian Data Center plugins from Atlassian Marketplace
@@ -76,6 +78,8 @@ This will:
 
 1. Open the Admin UI: http://localhost:3000/admin
 
+![Admin Dashboard](image/admin-page.png)
+
 2. Run the sync stages in order:
 
    **Stage 1: Metadata Ingestion**
@@ -84,16 +88,27 @@ This will:
    - Duration: 2-4 hours (depending on rate limits)
    - Can be paused and resumed at any time
 
+   ![Stage 1 Progress](image/sync-stage-1.png)
+
    **Stage 2: Download Latest Versions**
    - Downloads the latest compatible version of each plugin
    - Duration: 4-8 hours
    - Resumable
+
+   ![Stage 2 Progress](image/sync-stage-2.png)
 
    **Stage 3: Download All Versions**
    - Downloads all available versions
    - Duration: 24-48 hours
    - Resumable
    - Optional: Only run if you need all historical versions
+
+   ![Stage 3 Progress](image/sync-stage-3.png)
+
+3. Monitor sync progress with detailed statistics and logs:
+
+   ![Sync Statistics](image/sync-stats.png)
+   ![Sync Logs](image/sync-logs.png)
 
 ## Development Mode
 
@@ -231,15 +246,33 @@ Parameters:
 - `page` (optional): Page number (default: 1)
 - `limit` (optional): Items per page (default: 20)
 
+**UI Example:**
+
+![Plugin Browser](image/search-plugins-page.png)
+
+![Search Interface](image/search.png)
+
+![Plugin Card](image/plugin-card.png)
+
 #### Get Plugin Details
 ```
 GET /api/plugins/:addonKey
 ```
 
+**UI Example:**
+
+![Plugin Details Page](image/plugin-page.png)
+
 #### Get Plugin Versions
 ```
 GET /api/plugins/:addonKey/versions?jiraVersion=<version>
 ```
+
+**UI Example:**
+
+![Plugin Versions List](image/plagin-verisons-list.png)
+
+![Version Details Dialog](image/plugin-page-version-dialog.png)
 
 #### Download Plugin
 ```
